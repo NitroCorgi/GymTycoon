@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gym Tycoon</title>
+    <meta name="description" content="Gym Tycoon browser game starter" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <div class="metric">
+          <span>Bank</span>
+          <strong id="bank-value">€50.000</strong>
+        </div>
+        <div class="metric">
+          <span>Popularity</span>
+          <strong id="popularity-value">★☆☆☆☆</strong>
+        </div>
+        <div class="metric">
+          <span>Monthly Costs</span>
+          <strong id="monthly-costs-value">€1.000</strong>
+        </div>
+        <div class="metric">
+          <span>Projected Income</span>
+          <strong id="projected-income-value">€0</strong>
+        </div>
+        <div class="metric">
+          <span>Members</span>
+          <strong id="members-value">👤 0</strong>
+        </div>
+        <div class="metric">
+          <span>Free Lockers</span>
+          <strong id="lockers-value">0</strong>
+        </div>
+        <div class="metric">
+          <span>Satisfaction</span>
+          <strong id="satisfaction-value">☹️ 0</strong>
+        </div>
+        <label class="metric fee-metric" for="subscription-input">
+          <span>Membership Fee</span>
+          <input
+            id="subscription-input"
+            type="text"
+            inputmode="numeric"
+            value="€30"
+            aria-label="Membership fee"
+          />
+        </label>
+      </header>
+      <main class="game-shell">
+        <canvas id="game-canvas" aria-label="Game canvas"></canvas>
+        <section id="title-screen" class="title-screen" aria-label="Title screen">
+          <h1>Gym Tycoon</h1>
+          <div class="title-screen-actions">
+            <button id="campaign-btn" type="button" disabled>Campaign</button>
+            <button id="free-mode-btn" type="button">Free Mode</button>
+          </div>
+        </section>
+
+        <section id="location-screen" class="location-screen" aria-label="Location selection screen">
+          <h2>Select Location</h2>
+          <div class="location-options" role="group" aria-label="Available locations">
+            <button class="location-option" type="button" data-location-id="small-rural">
+              <span class="location-option-title">Small Property in rural area</span>
+              <span class="location-option-meta">Map: 8x8</span>
+              <span class="location-option-meta">Rent: $500 / month</span>
+              <span class="location-option-meta">~10 customer encounters / month (+1 per month)</span>
+            </button>
+            <button class="location-option" type="button" data-location-id="medium-suburban">
+              <span class="location-option-title">Medium Property in suburban district</span>
+              <span class="location-option-meta">Map: 12x10</span>
+              <span class="location-option-meta">Rent: $1,500 / month</span>
+              <span class="location-option-meta">~20 customer encounters / month (+2 per month)</span>
+            </button>
+            <button class="location-option" type="button" data-location-id="downtown-prime">
+              <span class="location-option-title">Downtown property in prime location</span>
+              <span class="location-option-meta">Map: L-shaped (10x12 + 3x5)</span>
+              <span class="location-option-meta">Rent: $3,000 / month</span>
+              <span class="location-option-meta">~30 customer encounters / month (+3 per month)</span>
+            </button>
+          </div>
+        </section>
+
+        <section class="monthly-card" aria-label="Monthly member changes">
+          <button id="statistics-btn" type="button">Statistics</button>
+          <div id="statistics-panel" class="statistics-panel" aria-label="Last six months statistics">
+            <table class="statistics-table">
+              <thead>
+                <tr>
+                  <th>Month</th>
+                  <th>Members gained</th>
+                  <th>Members lost</th>
+                  <th>Profit</th>
+                </tr>
+              </thead>
+              <tbody id="statistics-body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="device-card" class="device-card is-hidden" aria-label="Selected device">
+          <h3>Device</h3>
+          <p id="device-name">None selected</p>
+          <p id="device-break-prob">Break chance next use: -</p>
+          <p id="device-sell-value">Sell price: -</p>
+          <button id="sell-device-btn" type="button" disabled>Sell Device</button>
+        </section>
+
+        <section class="customer-card" aria-label="Selected customer">
+          <h2>Customer</h2>
+          <p id="customer-name">None selected</p>
+          <p id="customer-member">Member: -</p>
+          <p id="customer-satisfaction">Satisfaction: -</p>
+          <p id="customer-shower-plan">Plans shower: -</p>
+          <div class="customer-training-plan">
+            <h3>Training Plan</h3>
+            <div id="customer-training-list" class="customer-training-list">
+              <p class="customer-plan-empty">No customer selected</p>
+            </div>
+          </div>
+          <div class="customer-thoughts">
+            <h3>Thoughts</h3>
+            <div id="customer-thoughts-list" class="customer-thoughts-list">
+              <p class="customer-plan-empty">No customer selected</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="buy-dock" aria-label="Buy mode controls">
+          <div id="buy-panel" class="buy-panel" role="group" aria-label="Devices for purchase">
+            <div class="buy-tabs" role="tablist" aria-label="Buy menu categories">
+              <button id="buy-tab-devices-btn" class="buy-tab" type="button">Devices</button>
+              <button id="buy-tab-facilities-btn" class="buy-tab" type="button">Check-in & Facilities</button>
+              <button id="buy-tab-decor-btn" class="buy-tab" type="button">Decor</button>
+            </div>
+            <div id="buy-filters" class="buy-filters" aria-label="Device type filters"></div>
+            <div id="buy-grid" class="buy-grid"></div>
+          </div>
+          <button id="buy-mode-btn" type="button">Buy Devices</button>
+          <p class="hint">Press R to rotate</p>
+        </section>
+      </main>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

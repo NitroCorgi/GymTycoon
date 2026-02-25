@@ -1,0 +1,645 @@
+import { peopleMethods } from './mainScene/peopleMethods.js';
+import { interactionUiMethods } from './mainScene/interactionUiMethods.js';
+import { layoutRenderMethods } from './mainScene/layoutRenderMethods.js';
+import {
+  CUSTOMER_TYPES,
+  FIRST_NAMES,
+  FREE_MODE_LOCATIONS,
+  ITEM_CATALOG,
+  LAST_NAMES,
+  SATISFACTION_MAX,
+  SATISFACTION_MIN
+} from './mainSceneConfig.js';
+
+export class MainScene {
+  constructor({ ui }) {
+    this.ui = ui;
+    this.buyItemButtons = new Map();
+
+    this.startNewGame();
+    this.bindUi();
+    this.refreshUi();
+  }
+
+  onEnter() {
+    this.ui?.root?.classList.remove('is-title-screen');
+    this.ui?.titleScreen?.classList.remove('is-open');
+    this.ui?.locationScreen?.classList.remove('is-open');
+  }
+
+  getDefaultLocationConfig() {
+    return FREE_MODE_LOCATIONS[0];
+  }
+
+  createTileAvailabilityGrid(rows, cols, mapAreas) {
+    if (!Array.isArray(mapAreas) || mapAreas.length === 0) {
+      return Array.from({ length: rows }, () => Array(cols).fill(true));
+    }
+
+    const grid = Array.from({ length: rows }, () => Array(cols).fill(false));
+
+    for (const area of mapAreas) {
+      const startRow = Math.max(0, Math.floor(area.startRow ?? 0));
+      const startCol = Math.max(0, Math.floor(area.startCol ?? 0));
+      const areaRows = Math.max(0, Math.floor(area.rows ?? 0));
+      const areaCols = Math.max(0, Math.floor(area.cols ?? 0));
+
+      for (let row = startRow; row < Math.min(rows, startRow + areaRows); row += 1) {
+        for (let col = startCol; col < Math.min(cols, startCol + areaCols); col += 1) {
+          grid[row][col] = true;
+        }
+      }
+    }
+
+    return grid;
+  }
+
+  getFallbackEntranceTile() {
+    const preferredRow = Math.max(0, Math.floor(this.mapRows / 2));
+    if (this.isTileAvailable(preferredRow, 0)) {
+      return { row: preferredRow, col: 0 };
+    }
+
+    for (let row = 0; row < this.mapRows; row += 1) {
+      if (this.isTileAvailable(row, 0)) {
+        return { row, col: 0 };
+      }
+    }
+
+    for (let row = 0; row < this.mapRows; row += 1) {
+      for (let col = 0; col < this.mapCols; col += 1) {
+        if (this.isTileAvailable(row, col)) {
+          return { row, col };
+        }
+      }
+    }
+
+    return { row: 0, col: 0 };
+  }
+
+  isTileAvailable(row, col) {
+    const inBounds = row >= 0 && col >= 0 && row < this.mapRows && col < this.mapCols;
+    if (!inBounds) return false;
+    return this.tileAvailability?.[row]?.[col] === true;
+  }
+
+  startNewGame(locationConfig = this.getDefaultLocationConfig()) {
+    const selectedLocation = locationConfig ?? this.getDefaultLocationConfig();
+
+    this.locationId = selectedLocation.id;
+    this.mapRows = selectedLocation.mapRows ?? 8;
+    this.mapCols = selectedLocation.mapCols ?? 8;
+    this.tileAvailability = this.createTileAvailabilityGrid(
+      this.mapRows,
+      this.mapCols,
+      selectedLocation.mapAreas
+    );
+
+    this.money = 50000;
+    this.subscriptionFee = 30;
+    this.rentAmount = selectedLocation.monthlyRent ?? 1000;
+    this.monthlyEncountersBase = selectedLocation.monthlyEncountersBase ?? 20;
+    this.monthlyEncountersGrowth = selectedLocation.monthlyEncountersGrowth ?? 1;
+    this.elapsedMonths = 0;
+
+    this.cycleIntervalSeconds = 45;
+    this.cycleTimer = 0;
+    this.lastCycleIncome = 0;
+    this.lastCycleChurn = 0;
+    this.lastCycleGained = 0;
+    this.currentCycleGained = 0;
+    this.currentCycleChurn = 0;
+    this.monthSatisfactionSum = 0;
+    this.monthSatisfactionCount = 0;
+    this.currentMonth = 1;
+    this.currentYear = 26;
+    this.monthlyStatistics = [];
+    this.monthStartBank = this.money;
+
+    this.buyMode = false;
+    this.selectedItemKey = 'treadmill';
+    this.currentPlacementRotation = 0;
+    this.buyTab = 'devices';
+    this.activeBuyTypes = new Set(Object.values(ITEM_CATALOG).map((item) => item.type));
+
+    this.tiles = Array.from({ length: this.mapRows }, () => Array(this.mapCols).fill(null));
+    this.floorDecorTiles = Array.from({ length: this.mapRows }, () => Array(this.mapCols).fill(null));
+    this.wallpaperTopByCol = Array(this.mapCols).fill(null);
+    this.wallpaperLeftByRow = Array(this.mapRows).fill(null);
+    this.items = [];
+    this.nextItemId = 1;
+
+    this.popularity = 0;
+    this.members = 0;
+    this.memberProfiles = [];
+    this.nextMemberId = 1;
+
+    this.people = [];
+    this.nextPersonId = 1;
+    this.spawnTimer = 0;
+
+    this.hoveredTile = null;
+    this.hoveredWallSegment = null;
+    this.mapOffsetX = 0;
+    this.mapOffsetY = 0;
+    this.isDraggingMap = false;
+    this.lastDragPointer = null;
+    this.didDragInCurrentPointer = false;
+    this.consumeReleaseClick = false;
+
+    const preferredEntrance = selectedLocation.entranceTile ?? this.getFallbackEntranceTile();
+    this.entranceTile = this.isTileAvailable(preferredEntrance.row, preferredEntrance.col)
+      ? preferredEntrance
+      : this.getFallbackEntranceTile();
+
+    this.debugVisible = false;
+    this.memberListVisible = false;
+    this.statisticsVisible = false;
+    this.selectedDeviceId = null;
+    this.selectedDecor = null;
+    this.selectedPersonId = null;
+    this.lastMapLayout = null;
+
+    this.buildBuyPanelButtons();
+    this.refreshUi();
+  }
+
+  bindUi() {
+    if (!this.ui) return;
+
+    const {
+      buyModeButton,
+      buyPanel,
+      buyFilters,
+      buyTabDevicesButton,
+      buyTabFacilitiesButton,
+      buyTabDecorButton,
+      subscriptionInput,
+      monthlyCostsValue,
+      statisticsButton,
+      sellDeviceButton
+    } = this.ui;
+
+    buyModeButton?.addEventListener('click', () => {
+      this.buyMode = !this.buyMode;
+      this.refreshUi();
+    });
+
+    this.buildBuyPanelButtons();
+    buyPanel?.addEventListener('click', (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLButtonElement)) return;
+
+      const itemKey = target.dataset.itemKey;
+      if (!itemKey || !ITEM_CATALOG[itemKey]) return;
+
+      this.selectedItemKey = itemKey;
+      this.refreshUi();
+    });
+
+    buyFilters?.addEventListener('click', (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLButtonElement)) return;
+
+      const type = target.dataset.typeFilter;
+      if (!type) return;
+
+      if (this.activeBuyTypes.has(type)) {
+        this.activeBuyTypes.delete(type);
+      } else {
+        this.activeBuyTypes.add(type);
+      }
+
+      this.buildBuyPanelButtons();
+      this.refreshUi();
+    });
+
+    buyTabDevicesButton?.addEventListener('click', () => {
+      this.buyTab = 'devices';
+      this.buildBuyPanelButtons();
+      this.refreshUi();
+    });
+
+    buyTabFacilitiesButton?.addEventListener('click', () => {
+      this.buyTab = 'facilities';
+      this.buildBuyPanelButtons();
+      this.refreshUi();
+    });
+
+    buyTabDecorButton?.addEventListener('click', () => {
+      this.buyTab = 'decor';
+      this.buildBuyPanelButtons();
+      this.refreshUi();
+    });
+
+    statisticsButton?.addEventListener('click', () => {
+      this.statisticsVisible = !this.statisticsVisible;
+      this.updateUiMetrics();
+    });
+
+    sellDeviceButton?.addEventListener('click', () => {
+      this.sellSelectedDevice();
+    });
+
+    subscriptionInput?.addEventListener('input', (event) => {
+      const target = event.currentTarget;
+      if (!(target instanceof HTMLInputElement)) return;
+
+      const parsedValue = Number.parseInt(target.value.replace(/[^\d]/g, ''), 10);
+      if (Number.isNaN(parsedValue)) return;
+      this.subscriptionFee = Math.max(0, parsedValue);
+      this.updateUiMetrics();
+    });
+
+    subscriptionInput?.addEventListener('blur', () => {
+      this.updateUiMetrics();
+    });
+
+    if (subscriptionInput) {
+      subscriptionInput.value = `€${this.subscriptionFee}`;
+    }
+    if (monthlyCostsValue) {
+      monthlyCostsValue.textContent = `€${Math.floor(this.getMonthlyCosts())}`;
+    }
+
+    buyPanel?.classList.toggle('is-open', this.buyMode);
+    this.updateUiMetrics();
+  }
+
+  refreshUi() {
+    if (!this.ui) return;
+
+    const {
+      buyModeButton,
+      buyPanel,
+      buyFilters,
+      buyTabDevicesButton,
+      buyTabFacilitiesButton,
+      buyTabDecorButton,
+      buyGrid
+    } = this.ui;
+    const selectedKey = this.selectedItemKey;
+
+    if (buyModeButton) {
+      buyModeButton.textContent = this.buyMode ? 'Buy Devices (ON)' : 'Buy Devices';
+      buyModeButton.classList.toggle('is-active', this.buyMode);
+    }
+
+    buyPanel?.classList.toggle('is-open', this.buyMode);
+    buyFilters?.classList.toggle('is-open', this.buyMode);
+
+    buyTabDevicesButton?.classList.toggle('is-active', this.buyTab === 'devices');
+    buyTabFacilitiesButton?.classList.toggle('is-active', this.buyTab === 'facilities');
+    buyTabDecorButton?.classList.toggle('is-active', this.buyTab === 'decor');
+    buyGrid?.classList.toggle('is-open', this.buyMode);
+
+    for (const [itemKey, button] of this.buyItemButtons.entries()) {
+      button.classList.toggle('is-selected', selectedKey === itemKey);
+    }
+
+    this.updateUiMetrics();
+  }
+
+  formatEuro(value) {
+    const numericValue = Math.max(0, Math.floor(Number(value) || 0));
+    return `€${numericValue.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`;
+  }
+
+  getBuyTabForType(type) {
+    if (type === 'decor') return 'decor';
+    return type === 'check-in' || type === 'locker' || type === 'shower' ? 'facilities' : 'devices';
+  }
+
+  getTypeColorClass(type) {
+    if (type === 'recovery') return 'is-type-relax';
+    return `is-type-${type}`;
+  }
+
+  getTypeLabel(type) {
+    if (type === 'recovery') return 'Relax';
+    if (type === 'check-in') return 'Check-in';
+    if (type === 'weightlifting') return 'Weightlifting';
+    if (type === 'decor') return 'Decor';
+    return type.charAt(0).toUpperCase() + type.slice(1);
+  }
+
+  getAvailableTypesForTab() {
+    const types = new Set();
+    for (const item of Object.values(ITEM_CATALOG)) {
+      if (this.getBuyTabForType(item.type) === this.buyTab) {
+        types.add(item.type);
+      }
+    }
+
+    return [...types];
+  }
+
+  buildBuyTypeFilters() {
+    if (!this.ui?.buyFilters) return;
+
+    this.ui.buyFilters.innerHTML = '';
+    for (const type of this.getAvailableTypesForTab()) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.dataset.typeFilter = type;
+      button.className = `buy-filter ${this.getTypeColorClass(type)}`;
+      button.classList.toggle('is-active', this.activeBuyTypes.has(type));
+      button.textContent = this.getTypeLabel(type);
+      this.ui.buyFilters.appendChild(button);
+    }
+  }
+
+  buildBuyPanelButtons() {
+    if (!this.ui?.buyGrid) return;
+
+    this.buildBuyTypeFilters();
+    this.buyItemButtons.clear();
+    this.ui.buyGrid.innerHTML = '';
+
+    for (const [itemKey, item] of Object.entries(ITEM_CATALOG)) {
+      if (this.getBuyTabForType(item.type) !== this.buyTab) {
+        continue;
+      }
+      if (!this.activeBuyTypes.has(item.type)) {
+        continue;
+      }
+
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = `buy-tile ${this.getTypeColorClass(item.type)}`;
+      button.dataset.itemKey = itemKey;
+
+      const sprite = document.createElement('span');
+      sprite.className = 'buy-tile-sprite';
+      const spriteSource = Array.isArray(item.assetRotations) ? item.assetRotations[0] : null;
+      if (spriteSource) {
+        sprite.classList.add('buy-tile-sprite--asset');
+        sprite.style.backgroundImage = `url(${spriteSource})`;
+      }
+
+      const name = document.createElement('span');
+      name.className = 'buy-tile-name';
+      name.textContent = item.label;
+
+      const price = document.createElement('span');
+      price.className = 'buy-tile-price';
+      price.textContent = this.formatEuro(item.cost);
+
+      button.appendChild(sprite);
+      button.appendChild(name);
+      button.appendChild(price);
+
+      this.ui.buyGrid.append(button);
+      this.buyItemButtons.set(itemKey, button);
+    }
+  }
+
+  update(deltaSeconds, game) {
+    this.handleMapDrag(game);
+    const mapLayout = this.getMapLayout(game.canvas.width, game.canvas.height);
+    this.lastMapLayout = mapLayout;
+
+    this.handlePlacementRotation(game);
+    this.updateHoveredTile(game, mapLayout);
+    this.handleDeviceSelectionClick(game);
+    this.handlePlacementClick(game);
+
+    this.spawnTimer += deltaSeconds;
+    while (this.spawnTimer >= this.getSpawnIntervalSeconds()) {
+      this.spawnIncomingPerson(mapLayout);
+      this.spawnTimer -= this.getSpawnIntervalSeconds();
+    }
+
+    this.cycleTimer += deltaSeconds;
+    while (this.cycleTimer >= this.cycleIntervalSeconds) {
+      this.processEconomyCycle();
+      this.cycleTimer -= this.cycleIntervalSeconds;
+    }
+
+    this.updateBrokenDevices(deltaSeconds);
+    this.updatePeople(deltaSeconds, mapLayout);
+    this.updatePopularity();
+    this.updateUiMetrics();
+  }
+
+  processEconomyCycle() {
+    this.updatePopularity();
+    this.syncMemberCount();
+
+    for (const member of this.memberProfiles) {
+      member.monthsSubscribed += 1;
+    }
+
+    this.lastCycleChurn = this.currentCycleChurn;
+    this.lastCycleGained = this.currentCycleGained;
+    this.currentCycleGained = 0;
+    this.currentCycleChurn = 0;
+    this.monthSatisfactionSum = 0;
+    this.monthSatisfactionCount = 0;
+
+    const monthLabel = this.getCurrentMonthLabel();
+    const monthlyCosts = this.getMonthlyCosts();
+    const subscriptionIncome = this.subscriptionFee * this.members;
+    this.lastCycleIncome = subscriptionIncome;
+    this.money = Math.max(0, this.money - monthlyCosts + subscriptionIncome);
+    const monthlyProfit = this.money - this.monthStartBank;
+    this.recordMonthlyStatistics({
+      monthLabel,
+      membersGained: this.lastCycleGained,
+      membersLost: this.lastCycleChurn,
+      profit: monthlyProfit
+    });
+    this.monthStartBank = this.money;
+    this.advanceMonth();
+  }
+
+  getCurrentMonthLabel() {
+    return `${String(this.currentMonth).padStart(2, '0')}/${String(this.currentYear).padStart(2, '0')}`;
+  }
+
+  recordMonthlyStatistics(entry) {
+    this.monthlyStatistics.unshift(entry);
+    if (this.monthlyStatistics.length > 6) {
+      this.monthlyStatistics.length = 6;
+    }
+  }
+
+  advanceMonth() {
+    this.elapsedMonths += 1;
+    this.currentMonth += 1;
+    if (this.currentMonth <= 12) return;
+
+    this.currentMonth = 1;
+    this.currentYear = (this.currentYear + 1) % 100;
+  }
+
+  getSpawnIntervalSeconds() {
+    const targetMonthlyEncounters = Math.max(
+      1,
+      this.monthlyEncountersBase + this.monthlyEncountersGrowth * this.elapsedMonths
+    );
+
+    return Math.max(0.35, this.cycleIntervalSeconds / targetMonthlyEncounters);
+  }
+
+  updatePopularity() {
+    this.popularity = this.items.reduce((sum, item) => {
+      if (this.isItemBroken(item)) return sum;
+      return sum + ITEM_CATALOG[item.key].popularity;
+    }, 0);
+  }
+
+  updateBrokenDevices(deltaSeconds) {
+    for (const item of this.items) {
+      if (!this.isItemBroken(item)) continue;
+
+      const wasBroken = item.repairSecondsRemaining > 0;
+      item.repairSecondsRemaining = Math.max(0, item.repairSecondsRemaining - deltaSeconds);
+
+      if (wasBroken && item.repairSecondsRemaining === 0) {
+        item.breakChance = 0.1;
+      }
+    }
+  }
+
+  spawnIncomingPerson(mapLayout) {
+    const entryPoints = this.getEntrancePoints(mapLayout);
+    const customerType = CUSTOMER_TYPES[Math.floor(Math.random() * CUSTOMER_TYPES.length)];
+    const visitingMember =
+      this.memberProfiles.length > 0 && Math.random() < this.getReturningMemberVisitChance()
+        ? this.memberProfiles[Math.floor(Math.random() * this.memberProfiles.length)]
+        : null;
+    const isMember = visitingMember !== null;
+
+    this.people.push({
+      id: this.nextPersonId,
+      x: entryPoints.outside.x,
+      y: entryPoints.outside.y,
+      speed: 60 + Math.random() * 25,
+      name: visitingMember?.name ?? this.pickRandomName(),
+      customerType,
+      state: 'entering',
+      targetX: entryPoints.inside.x,
+      targetY: entryPoints.inside.y,
+      targetItemId: null,
+      destinationType: null,
+      destinationItemKey: null,
+      queuedItemId: null,
+      assignedLockerItemId: null,
+      queueSeconds: 0,
+      trainingRemaining: 0,
+      trainingPlan: [],
+      trainingPlanIndex: 0,
+      trainingPlanResults: [],
+      trainingPlanAttemptCounts: [],
+      plansShower: Math.random() < 0.3,
+      lastDeviceType: null,
+      visitSatisfaction: 0,
+      baselineSatisfaction: 0,
+      isMember,
+      memberId: visitingMember?.id ?? null,
+      paidDailyTicket: false,
+      canSubscribe: true,
+      unhappy: false,
+      didConversionCheck: false,
+      thoughtNoShower: false,
+      thoughtLongQueue: false,
+      thoughtNoLocker: false,
+      thoughtBrokenDevices: false,
+      thoughtPriceTooHigh: false,
+      thoughtPriceGreatDeal: false
+    });
+
+    this.nextPersonId += 1;
+  }
+
+  randomIntInclusive(min, max) {
+    const low = Math.ceil(min);
+    const high = Math.floor(max);
+    return Math.floor(Math.random() * (high - low + 1)) + low;
+  }
+
+  clampSatisfaction(value) {
+    return Math.min(SATISFACTION_MAX, Math.max(SATISFACTION_MIN, value));
+  }
+
+  addSatisfaction(person, amount) {
+    person.visitSatisfaction = this.clampSatisfaction(person.visitSatisfaction + amount);
+  }
+
+  setSatisfaction(person, value) {
+    person.visitSatisfaction = this.clampSatisfaction(value);
+  }
+
+  initializeVisitSatisfaction(person) {
+    const popularityMinusPrice = this.popularity - this.subscriptionFee;
+
+    person.thoughtPriceTooHigh = popularityMinusPrice < -10;
+    person.thoughtPriceGreatDeal = popularityMinusPrice > 10;
+
+    let baseline;
+    if (popularityMinusPrice > 10) {
+      baseline = this.randomIntInclusive(60, 80);
+    } else if (popularityMinusPrice < -10) {
+      baseline = this.randomIntInclusive(20, 40);
+    } else {
+      baseline = this.randomIntInclusive(40, 60);
+    }
+
+    person.baselineSatisfaction = baseline;
+    this.setSatisfaction(person, baseline);
+  }
+
+  registerVisitSatisfaction(person) {
+    this.monthSatisfactionSum += person.visitSatisfaction;
+    this.monthSatisfactionCount += 1;
+  }
+
+  getAverageSatisfaction() {
+    if (this.monthSatisfactionCount === 0) return 0;
+    return Math.round(this.monthSatisfactionSum / this.monthSatisfactionCount);
+  }
+
+  pickRandomName() {
+    const firstName = FIRST_NAMES[Math.floor(Math.random() * FIRST_NAMES.length)];
+    const lastName = LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)];
+    return `${firstName} ${lastName}`;
+  }
+
+  syncMemberCount() {
+    this.members = this.memberProfiles.length;
+  }
+
+  createMemberProfile(person) {
+    const profile = {
+      id: this.nextMemberId,
+      name: this.pickRandomName(),
+      type: person.customerType.preferredType,
+      color: person.customerType.color,
+      monthsSubscribed: 0,
+      lastVisitSatisfaction: this.clampSatisfaction(Math.round(person.visitSatisfaction))
+    };
+
+    this.nextMemberId += 1;
+    this.memberProfiles.push(profile);
+    this.syncMemberCount();
+    return profile;
+  }
+
+  removeMemberProfile(memberId) {
+    const nextProfiles = this.memberProfiles.filter((member) => member.id !== memberId);
+    const removed = nextProfiles.length !== this.memberProfiles.length;
+    this.memberProfiles = nextProfiles;
+    this.syncMemberCount();
+    return removed;
+  }
+
+  updateMemberProfileVisit(memberId, satisfaction) {
+    const member = this.memberProfiles.find((entry) => entry.id === memberId);
+    if (!member) return;
+
+    member.lastVisitSatisfaction = this.clampSatisfaction(Math.round(satisfaction));
+  }
+}
+
+Object.assign(MainScene.prototype, peopleMethods, interactionUiMethods, layoutRenderMethods);

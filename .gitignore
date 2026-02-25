@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.DS_Store
+.vscode/*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+src/assets/devices/elliptical/elliptical-r0.png
+src/assets/devices/elliptical/elliptical-r1.png
+src/assets/devices/elliptical/elliptical-r2.png
+src/assets/devices/elliptical/elliptical-r3.png
+src/assets/devices/treadmill/README.md
+src/assets/devices/treadmill/treadmill-r0.png
+src/assets/devices/treadmill/treadmill-r1.png
+src/assets/devices/treadmill/treadmill-r2.png
+src/assets/devices/treadmill/treadmill-r3.png
