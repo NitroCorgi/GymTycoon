@@ -278,7 +278,6 @@ export const interactionUiMethods = {
 
     const selected = ITEM_CATALOG[this.selectedItemKey];
     if (!selected) return;
-    if (this.money < selected.cost) return;
 
     if (selected.decorTarget === 'floor') {
       if (!this.hoveredTile) return;
@@ -707,12 +706,13 @@ export const interactionUiMethods = {
       membersValue,
       lockersValue,
       satisfactionValue,
+      metricStatButtons,
       subscriptionInput,
       membersGainedValue,
       membersLostValue,
-      statisticsButton,
-      statisticsPanel,
-      statisticsBody,
+      statsModal,
+      statsModalTitle,
+      statsModalBody,
       deviceName,
       deviceBreakProb,
       deviceSellValue,
@@ -728,12 +728,18 @@ export const interactionUiMethods = {
     } = this.ui;
 
     const averageSatisfaction = this.getAverageSatisfaction();
+    const projectedMembersIncome = this.members * this.subscriptionFee;
+    const projectedDayTicketIncome = this.lastCycleDayTicketIncome;
+    const totalProjectedIncome = projectedMembersIncome + projectedDayTicketIncome;
 
-    if (bankValue) bankValue.textContent = this.formatEuro(this.money);
+    if (bankValue) {
+      bankValue.textContent = this.formatSignedEuro(this.money);
+      bankValue.classList.toggle('is-danger', this.money < 0);
+    }
     if (popularityValue) popularityValue.textContent = this.getPopularityStars();
     if (monthlyCostsValue) monthlyCostsValue.textContent = this.formatEuro(this.getMonthlyCosts());
     if (projectedIncomeValue) {
-      projectedIncomeValue.textContent = this.formatEuro(this.members * this.subscriptionFee);
+      projectedIncomeValue.textContent = this.formatEuro(totalProjectedIncome);
     }
     if (membersValue) membersValue.textContent = `👤 ${this.members}`;
     if (lockersValue) {
@@ -749,9 +755,20 @@ export const interactionUiMethods = {
     }
     if (membersGainedValue) membersGainedValue.textContent = `${this.lastCycleGained}`;
     if (membersLostValue) membersLostValue.textContent = `${this.lastCycleChurn}`;
-    statisticsButton?.classList.toggle('is-active', this.statisticsVisible);
-    statisticsPanel?.classList.toggle('is-open', this.statisticsVisible);
-    this.renderStatisticsTable(statisticsBody);
+    metricStatButtons?.forEach((button) => {
+      button.classList.toggle('is-active', button.dataset.statKey === this.activeStatisticKey);
+    });
+
+    statsModal?.classList.toggle('is-open', Boolean(this.activeStatisticKey));
+    if (statsModal) {
+      statsModal.setAttribute('aria-hidden', this.activeStatisticKey ? 'false' : 'true');
+    }
+
+    if (this.activeStatisticKey && statsModalTitle && statsModalBody) {
+      this.renderStatisticModalContent(this.activeStatisticKey, statsModalTitle, statsModalBody);
+    } else if (statsModalBody) {
+      statsModalBody.innerHTML = '';
+    }
 
     const selected = this.items.find((item) => item.id === this.selectedDeviceId) ?? null;
     const selectedDecor = this.selectedDecor;
@@ -800,35 +817,419 @@ export const interactionUiMethods = {
     );
   },
 
-  renderStatisticsTable(statisticsBody) {
-    if (!statisticsBody) return;
+  renderStatisticModalContent(statKey, titleElement, bodyElement) {
+    const titleByKey = {
+      bank: 'Bank by Month',
+      popularity: 'Popularity by Month',
+      'monthly-costs': 'Monthly Cost Breakdown',
+      'projected-income': 'Projected Income Breakdown',
+      members: 'Members by Month',
+      'free-lockers': 'Free Lockers',
+      satisfaction: 'Satisfaction by Month'
+    };
 
-    statisticsBody.innerHTML = '';
+    titleElement.textContent = titleByKey[statKey] ?? 'Statistics';
+    bodyElement.innerHTML = '';
 
-    for (let index = 0; index < 6; index += 1) {
-      const row = document.createElement('tr');
-      const entry = this.monthlyStatistics[index] ?? null;
-
-      const monthCell = document.createElement('td');
-      const gainedCell = document.createElement('td');
-      const lostCell = document.createElement('td');
-      const profitCell = document.createElement('td');
-
-      monthCell.textContent = entry ? entry.monthLabel : '-';
-      gainedCell.textContent = entry ? `${entry.membersGained}` : '-';
-      lostCell.textContent = entry ? `${entry.membersLost}` : '-';
-      profitCell.textContent = entry ? this.formatSignedEuro(entry.profit) : '-';
-
-      if (entry && entry.profit < 0) {
-        profitCell.classList.add('is-negative');
-      }
-
-      row.appendChild(monthCell);
-      row.appendChild(gainedCell);
-      row.appendChild(lostCell);
-      row.appendChild(profitCell);
-      statisticsBody.appendChild(row);
+    if (statKey === 'bank') {
+      this.renderLineChart(
+        bodyElement,
+        [...this.monthlyBankHistory].reverse(),
+        (entry) => entry.value,
+        (value) => this.formatEuro(value),
+        {
+          yAxisLabel: 'EUR'
+        }
+      );
+      return;
     }
+
+    if (statKey === 'popularity') {
+      this.renderColumnChart(
+        bodyElement,
+        [...this.monthlyPopularityHistory].reverse(),
+        (entry) => entry.value,
+        (value) => this.formatPopularityStarsValue(value),
+        {
+          yAxisLabel: 'Stars',
+          yTickFormatter: (value) => this.formatPopularityStarsValue(value)
+        }
+      );
+      return;
+    }
+
+    if (statKey === 'monthly-costs') {
+      const itemMonthlyCosts = this.items.reduce((sum, item) => sum + (ITEM_CATALOG[item.key].monthlyCost ?? 0), 0);
+      this.renderPieChart(bodyElement, [
+        { label: 'Rent', value: this.rentAmount, color: '#6ea0ff' },
+        { label: 'Devices/Facilities', value: itemMonthlyCosts, color: '#34d399' }
+      ]);
+      return;
+    }
+
+    if (statKey === 'projected-income') {
+      const membersIncome = this.members * this.subscriptionFee;
+      const dayTicketIncome = this.lastCycleDayTicketIncome;
+      this.renderPieChart(bodyElement, [
+        { label: 'Projected membership fees', value: membersIncome, color: '#6ea0ff' },
+        { label: 'Projected day tickets', value: dayTicketIncome, color: '#fbbf24' }
+      ]);
+      return;
+    }
+
+    if (statKey === 'members') {
+      this.renderColumnChart(
+        bodyElement,
+        [...this.monthlyMemberHistory].reverse(),
+        (entry) => entry.value,
+        (value) => `${Math.round(value)} members`,
+        {
+          yAxisLabel: 'Members'
+        }
+      );
+      return;
+    }
+
+    if (statKey === 'free-lockers') {
+      const valueGrid = document.createElement('div');
+      valueGrid.className = 'stats-value-grid';
+
+      const freeNow = document.createElement('article');
+      freeNow.className = 'stats-value-card';
+      const freeNowLabel = document.createElement('span');
+      freeNowLabel.textContent = 'Free lockers now';
+      const freeNowValue = document.createElement('strong');
+      freeNowValue.textContent = `${this.getFreeLockerCapacity()}`;
+      freeNow.appendChild(freeNowLabel);
+      freeNow.appendChild(freeNowValue);
+
+      const turnedDown = document.createElement('article');
+      turnedDown.className = 'stats-value-card';
+      const turnedDownLabel = document.createElement('span');
+      turnedDownLabel.textContent = 'Customers turned down this month';
+      const turnedDownValue = document.createElement('strong');
+      turnedDownValue.textContent = `${this.currentCycleLockerTurnedDown}`;
+      turnedDown.appendChild(turnedDownLabel);
+      turnedDown.appendChild(turnedDownValue);
+
+      valueGrid.appendChild(freeNow);
+      valueGrid.appendChild(turnedDown);
+      bodyElement.appendChild(valueGrid);
+      return;
+    }
+
+    if (statKey === 'satisfaction') {
+      this.renderLineChart(
+        bodyElement,
+        [...this.monthlySatisfactionHistory].reverse(),
+        (entry) => entry.value,
+        (value) => `${Math.round(value)}%`,
+        {
+          yAxisLabel: '%',
+          yTickFormatter: (value) => `${Math.round(value)}%`
+        }
+      );
+    }
+  },
+
+  formatPopularityStarsValue(value) {
+    const stars = Math.min(5, Math.max(1, Math.floor((Number(value) || 0) / 20) + 1));
+    return `${stars}★`;
+  },
+
+  createChartSvgElement(tag, attributes = {}) {
+    const element = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    for (const [key, value] of Object.entries(attributes)) {
+      element.setAttribute(key, String(value));
+    }
+    return element;
+  },
+
+  renderLineChart(container, entries, valueAccessor, valueFormatter, options = {}) {
+    const safeEntries = Array.isArray(entries) ? entries.slice(-6) : [];
+    if (safeEntries.length === 0) {
+      container.textContent = 'No monthly data yet.';
+      return;
+    }
+
+    const yAxisLabel = options.yAxisLabel ?? '';
+    const yTickFormatter = options.yTickFormatter ?? valueFormatter;
+
+    const chart = document.createElement('div');
+    chart.className = 'stats-chart';
+    const svg = this.createChartSvgElement('svg', { viewBox: '0 0 600 240', role: 'img' });
+
+    const left = 72;
+    const top = 16;
+    const width = 512;
+    const height = 168;
+    const maxValue = Math.max(1, ...safeEntries.map((entry) => Number(valueAccessor(entry) || 0)));
+
+    const axisY = this.createChartSvgElement('line', {
+      x1: left,
+      y1: top,
+      x2: left,
+      y2: top + height,
+      stroke: '#2f435f',
+      'stroke-width': 1
+    });
+    const axisX = this.createChartSvgElement('line', {
+      x1: left,
+      y1: top + height,
+      x2: left + width,
+      y2: top + height,
+      stroke: '#2f435f',
+      'stroke-width': 1
+    });
+    svg.appendChild(axisY);
+    svg.appendChild(axisX);
+
+    const yTickValues = [maxValue, maxValue / 2, 0];
+    for (const tickValue of yTickValues) {
+      const y = top + height - (tickValue / maxValue) * height;
+      const tickMark = this.createChartSvgElement('line', {
+        x1: left - 4,
+        y1: y,
+        x2: left,
+        y2: y,
+        stroke: '#2f435f',
+        'stroke-width': 1
+      });
+      const tickText = this.createChartSvgElement('text', {
+        x: left - 7,
+        y: y + 3,
+        fill: '#93a8c7',
+        'font-size': 10,
+        'text-anchor': 'end'
+      });
+      tickText.textContent = yTickFormatter(tickValue);
+      svg.appendChild(tickMark);
+      svg.appendChild(tickText);
+    }
+
+    if (yAxisLabel) {
+      const axisTitle = this.createChartSvgElement('text', {
+        x: 18,
+        y: top + height / 2,
+        fill: '#cbd5e1',
+        'font-size': 11,
+        'font-weight': 600,
+        'text-anchor': 'middle',
+        transform: `rotate(-90 18 ${top + height / 2})`
+      });
+      axisTitle.textContent = yAxisLabel;
+      svg.appendChild(axisTitle);
+    }
+
+    const points = safeEntries.map((entry, index) => {
+      const value = Number(valueAccessor(entry) || 0);
+      const x = left + (safeEntries.length === 1 ? width / 2 : (width * index) / (safeEntries.length - 1));
+      const y = top + height - (value / maxValue) * height;
+      return { x, y, value, label: entry.monthLabel };
+    });
+
+    const polyline = this.createChartSvgElement('polyline', {
+      points: points.map((point) => `${point.x},${point.y}`).join(' '),
+      fill: 'none',
+      stroke: '#6ea0ff',
+      'stroke-width': 2.5
+    });
+    svg.appendChild(polyline);
+
+    for (const point of points) {
+      const dot = this.createChartSvgElement('circle', {
+        cx: point.x,
+        cy: point.y,
+        r: 3,
+        fill: '#cbd5e1'
+      });
+      const xLabel = this.createChartSvgElement('text', {
+        x: point.x,
+        y: top + height + 16,
+        fill: '#93a8c7',
+        'font-size': 10,
+        'text-anchor': 'middle'
+      });
+      xLabel.textContent = point.label;
+      svg.appendChild(dot);
+      svg.appendChild(xLabel);
+    }
+
+    const maxLabel = document.createElement('p');
+    maxLabel.className = 'stats-legend-item';
+    maxLabel.textContent = `Max: ${valueFormatter(maxValue)}`;
+
+    chart.appendChild(svg);
+    container.appendChild(chart);
+    container.appendChild(maxLabel);
+  },
+
+  renderColumnChart(container, entries, valueAccessor, valueFormatter, options = {}) {
+    const safeEntries = Array.isArray(entries) ? entries.slice(-6) : [];
+    if (safeEntries.length === 0) {
+      container.textContent = 'No monthly data yet.';
+      return;
+    }
+
+    const yAxisLabel = options.yAxisLabel ?? '';
+    const yTickFormatter = options.yTickFormatter ?? valueFormatter;
+
+    const chart = document.createElement('div');
+    chart.className = 'stats-chart';
+    const svg = this.createChartSvgElement('svg', { viewBox: '0 0 600 240', role: 'img' });
+
+    const left = 72;
+    const top = 16;
+    const width = 512;
+    const height = 168;
+    const maxValue = Math.max(1, ...safeEntries.map((entry) => Number(valueAccessor(entry) || 0)));
+    const slotWidth = width / safeEntries.length;
+    const barWidth = slotWidth * 0.62;
+
+    const axisY = this.createChartSvgElement('line', {
+      x1: left,
+      y1: top,
+      x2: left,
+      y2: top + height,
+      stroke: '#2f435f',
+      'stroke-width': 1
+    });
+    const axisX = this.createChartSvgElement('line', {
+      x1: left,
+      y1: top + height,
+      x2: left + width,
+      y2: top + height,
+      stroke: '#2f435f',
+      'stroke-width': 1
+    });
+    svg.appendChild(axisY);
+    svg.appendChild(axisX);
+
+    const yTickValues = [maxValue, maxValue / 2, 0];
+    for (const tickValue of yTickValues) {
+      const y = top + height - (tickValue / maxValue) * height;
+      const tickMark = this.createChartSvgElement('line', {
+        x1: left - 4,
+        y1: y,
+        x2: left,
+        y2: y,
+        stroke: '#2f435f',
+        'stroke-width': 1
+      });
+      const tickText = this.createChartSvgElement('text', {
+        x: left - 7,
+        y: y + 3,
+        fill: '#93a8c7',
+        'font-size': 10,
+        'text-anchor': 'end'
+      });
+      tickText.textContent = yTickFormatter(tickValue);
+      svg.appendChild(tickMark);
+      svg.appendChild(tickText);
+    }
+
+    if (yAxisLabel) {
+      const axisTitle = this.createChartSvgElement('text', {
+        x: 18,
+        y: top + height / 2,
+        fill: '#cbd5e1',
+        'font-size': 11,
+        'font-weight': 600,
+        'text-anchor': 'middle',
+        transform: `rotate(-90 18 ${top + height / 2})`
+      });
+      axisTitle.textContent = yAxisLabel;
+      svg.appendChild(axisTitle);
+    }
+
+    for (let index = 0; index < safeEntries.length; index += 1) {
+      const entry = safeEntries[index];
+      const value = Number(valueAccessor(entry) || 0);
+      const barHeight = (value / maxValue) * height;
+      const x = left + slotWidth * index + (slotWidth - barWidth) / 2;
+      const y = top + height - barHeight;
+
+      const bar = this.createChartSvgElement('rect', {
+        x,
+        y,
+        width: barWidth,
+        height: Math.max(1, barHeight),
+        fill: '#34d399'
+      });
+      const label = this.createChartSvgElement('text', {
+        x: x + barWidth / 2,
+        y: top + height + 16,
+        fill: '#93a8c7',
+        'font-size': 10,
+        'text-anchor': 'middle'
+      });
+      label.textContent = entry.monthLabel;
+
+      svg.appendChild(bar);
+      svg.appendChild(label);
+    }
+
+    const maxLabel = document.createElement('p');
+    maxLabel.className = 'stats-legend-item';
+    maxLabel.textContent = `Max: ${valueFormatter(maxValue)}`;
+
+    chart.appendChild(svg);
+    container.appendChild(chart);
+    container.appendChild(maxLabel);
+  },
+
+  renderPieChart(container, slices) {
+    const safeSlices = slices.filter((slice) => Number(slice.value) > 0);
+    const total = safeSlices.reduce((sum, slice) => sum + Number(slice.value), 0);
+
+    if (total <= 0) {
+      container.textContent = 'No data available yet.';
+      return;
+    }
+
+    const chart = document.createElement('div');
+    chart.className = 'stats-chart';
+    const svg = this.createChartSvgElement('svg', { viewBox: '0 0 420 240', role: 'img' });
+
+    const centerX = 140;
+    const centerY = 120;
+    const radius = 82;
+    let startAngle = -Math.PI / 2;
+
+    for (const slice of safeSlices) {
+      const value = Number(slice.value);
+      const angle = (value / total) * Math.PI * 2;
+      const endAngle = startAngle + angle;
+      const largeArc = angle > Math.PI ? 1 : 0;
+
+      const x1 = centerX + radius * Math.cos(startAngle);
+      const y1 = centerY + radius * Math.sin(startAngle);
+      const x2 = centerX + radius * Math.cos(endAngle);
+      const y2 = centerY + radius * Math.sin(endAngle);
+      const pathData = `M ${centerX} ${centerY} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2} Z`;
+
+      const path = this.createChartSvgElement('path', {
+        d: pathData,
+        fill: slice.color
+      });
+
+      svg.appendChild(path);
+      startAngle = endAngle;
+    }
+
+    chart.appendChild(svg);
+    container.appendChild(chart);
+
+    const legend = document.createElement('div');
+    legend.className = 'stats-legend';
+    for (const slice of safeSlices) {
+      const item = document.createElement('p');
+      item.className = 'stats-legend-item';
+      const percentage = Math.round((Number(slice.value) / total) * 100);
+      item.textContent = `${slice.label}: ${this.formatEuro(slice.value)} (${percentage}%)`;
+      legend.appendChild(item);
+    }
+    container.appendChild(legend);
   },
 
   renderMemberList(memberListBody) {

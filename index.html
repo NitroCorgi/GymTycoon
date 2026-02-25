@@ -12,30 +12,37 @@
         <div class="metric">
           <span>Bank</span>
           <strong id="bank-value">€50.000</strong>
+          <button class="metric-stat-btn" type="button" data-stat-key="bank" aria-label="Bank statistics">📈</button>
         </div>
         <div class="metric">
           <span>Popularity</span>
           <strong id="popularity-value">★☆☆☆☆</strong>
+          <button class="metric-stat-btn" type="button" data-stat-key="popularity" aria-label="Popularity statistics">📈</button>
         </div>
         <div class="metric">
           <span>Monthly Costs</span>
           <strong id="monthly-costs-value">€1.000</strong>
+          <button class="metric-stat-btn" type="button" data-stat-key="monthly-costs" aria-label="Monthly costs statistics">📈</button>
         </div>
         <div class="metric">
           <span>Projected Income</span>
           <strong id="projected-income-value">€0</strong>
+          <button class="metric-stat-btn" type="button" data-stat-key="projected-income" aria-label="Projected income statistics">📈</button>
         </div>
         <div class="metric">
           <span>Members</span>
           <strong id="members-value">👤 0</strong>
+          <button class="metric-stat-btn" type="button" data-stat-key="members" aria-label="Members statistics">📈</button>
         </div>
         <div class="metric">
           <span>Free Lockers</span>
           <strong id="lockers-value">0</strong>
+          <button class="metric-stat-btn" type="button" data-stat-key="free-lockers" aria-label="Free lockers statistics">📈</button>
         </div>
         <div class="metric">
           <span>Satisfaction</span>
           <strong id="satisfaction-value">☹️ 0</strong>
+          <button class="metric-stat-btn" type="button" data-stat-key="satisfaction" aria-label="Satisfaction statistics">📈</button>
         </div>
         <label class="metric fee-metric" for="subscription-input">
           <span>Membership Fee</span>
@@ -59,44 +66,115 @@
         </section>
 
         <section id="location-screen" class="location-screen" aria-label="Location selection screen">
-          <h2>Select Location</h2>
-          <div class="location-options" role="group" aria-label="Available locations">
-            <button class="location-option" type="button" data-location-id="small-rural">
-              <span class="location-option-title">Small Property in rural area</span>
-              <span class="location-option-meta">Map: 8x8</span>
-              <span class="location-option-meta">Rent: $500 / month</span>
-              <span class="location-option-meta">~10 customer encounters / month (+1 per month)</span>
-            </button>
-            <button class="location-option" type="button" data-location-id="medium-suburban">
-              <span class="location-option-title">Medium Property in suburban district</span>
-              <span class="location-option-meta">Map: 12x10</span>
-              <span class="location-option-meta">Rent: $1,500 / month</span>
-              <span class="location-option-meta">~20 customer encounters / month (+2 per month)</span>
-            </button>
-            <button class="location-option" type="button" data-location-id="downtown-prime">
-              <span class="location-option-title">Downtown property in prime location</span>
-              <span class="location-option-meta">Map: L-shaped (10x12 + 3x5)</span>
-              <span class="location-option-meta">Rent: $3,000 / month</span>
-              <span class="location-option-meta">~30 customer encounters / month (+3 per month)</span>
-            </button>
+          <h2>Select Setup</h2>
+          <div class="location-selection-grid">
+            <div class="location-selection-column" role="group" aria-label="Available locations">
+              <h3>Location</h3>
+              <div class="location-options">
+                <label class="location-option" for="location-small-rural">
+                  <input
+                    id="location-small-rural"
+                    class="location-option-check"
+                    type="checkbox"
+                    data-location-option
+                    value="small-rural"
+                  />
+                  <span class="location-option-content">
+                    <span class="location-option-title">Small Property in rural area</span>
+                    <span class="location-option-meta">Map: 8x8</span>
+                    <span class="location-option-meta">Rent: $500 / month</span>
+                    <span class="location-option-meta">~10 customer encounters / month (+1 per month)</span>
+                  </span>
+                </label>
+                <label class="location-option" for="location-medium-suburban">
+                  <input
+                    id="location-medium-suburban"
+                    class="location-option-check"
+                    type="checkbox"
+                    data-location-option
+                    value="medium-suburban"
+                  />
+                  <span class="location-option-content">
+                    <span class="location-option-title">Medium Property in suburban district</span>
+                    <span class="location-option-meta">Map: 12x10</span>
+                    <span class="location-option-meta">Rent: $1,500 / month</span>
+                    <span class="location-option-meta">~20 customer encounters / month (+2 per month)</span>
+                  </span>
+                </label>
+                <label class="location-option" for="location-downtown-prime">
+                  <input
+                    id="location-downtown-prime"
+                    class="location-option-check"
+                    type="checkbox"
+                    data-location-option
+                    value="downtown-prime"
+                  />
+                  <span class="location-option-content">
+                    <span class="location-option-title">Downtown property in prime location</span>
+                    <span class="location-option-meta">Map: L-shaped (10x12 + 3x5)</span>
+                    <span class="location-option-meta">Rent: $3,000 / month</span>
+                    <span class="location-option-meta">~30 customer encounters / month (+3 per month)</span>
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            <div class="location-selection-column" role="group" aria-label="Available difficulties">
+              <h3>Difficulty</h3>
+              <div class="location-options">
+                <label class="location-option" for="difficulty-easy">
+                  <input
+                    id="difficulty-easy"
+                    class="location-option-check"
+                    type="checkbox"
+                    data-difficulty-option
+                    value="easy"
+                  />
+                  <span class="location-option-content">
+                    <span class="location-option-title">Easy</span>
+                    <span class="location-option-meta">Starting bank: €100,000</span>
+                  </span>
+                </label>
+                <label class="location-option" for="difficulty-medium">
+                  <input
+                    id="difficulty-medium"
+                    class="location-option-check"
+                    type="checkbox"
+                    data-difficulty-option
+                    value="medium"
+                  />
+                  <span class="location-option-content">
+                    <span class="location-option-title">Medium</span>
+                    <span class="location-option-meta">Starting bank: €50,000</span>
+                  </span>
+                </label>
+                <label class="location-option" for="difficulty-hard">
+                  <input
+                    id="difficulty-hard"
+                    class="location-option-check"
+                    type="checkbox"
+                    data-difficulty-option
+                    value="hard"
+                  />
+                  <span class="location-option-content">
+                    <span class="location-option-title">Hard</span>
+                    <span class="location-option-meta">Starting bank: €30,000</span>
+                  </span>
+                </label>
+              </div>
+            </div>
           </div>
+          <button id="location-start-btn" class="location-start-btn" type="button" disabled>Start Game</button>
         </section>
 
-        <section class="monthly-card" aria-label="Monthly member changes">
-          <button id="statistics-btn" type="button">Statistics</button>
-          <div id="statistics-panel" class="statistics-panel" aria-label="Last six months statistics">
-            <table class="statistics-table">
-              <thead>
-                <tr>
-                  <th>Month</th>
-                  <th>Members gained</th>
-                  <th>Members lost</th>
-                  <th>Profit</th>
-                </tr>
-              </thead>
-              <tbody id="statistics-body"></tbody>
-            </table>
-          </div>
+        <section id="stats-modal" class="stats-modal" aria-label="Statistics window" aria-hidden="true">
+          <article class="stats-modal-card">
+            <header class="stats-modal-header">
+              <h2 id="stats-modal-title">Statistics</h2>
+              <button id="stats-modal-close-btn" type="button" aria-label="Close statistics">✕</button>
+            </header>
+            <div id="stats-modal-body" class="stats-modal-body"></div>
+          </article>
         </section>
 
         <section id="device-card" class="device-card is-hidden" aria-label="Selected device">

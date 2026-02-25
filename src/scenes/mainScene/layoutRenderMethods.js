@@ -1,7 +1,132 @@
 import { drawText } from '../../ui/drawText.js';
-import { getItemUsageSeconds, ITEM_CATALOG, REPAIR_SECONDS } from '../mainSceneConfig.js';
+import { EXTERIOR_MAP_STYLE, getItemUsageSeconds, ITEM_CATALOG, REPAIR_SECONDS } from '../mainSceneConfig.js';
 
 export const layoutRenderMethods = {
+  getExteriorBandRanges() {
+    let coveredDistance = 0;
+    return EXTERIOR_MAP_STYLE.tileBandsFromEntranceOutward.map((band) => {
+      const width = Math.max(0, Math.floor(band.width ?? 0));
+      const startDistance = coveredDistance + 1;
+      coveredDistance += width;
+      return {
+        type: band.type,
+        width,
+        startDistance,
+        endDistance: coveredDistance
+      };
+    });
+  },
+
+  getExteriorCenterDistanceForType(type, position = 'first') {
+    const matchingRanges = this.getExteriorBandRanges().filter((range) => range.type === type && range.width > 0);
+    if (matchingRanges.length === 0) {
+      return null;
+    }
+
+    const range = position === 'last' ? matchingRanges[matchingRanges.length - 1] : matchingRanges[0];
+    return Math.round((range.startDistance + range.endDistance) / 2);
+  },
+
+  getStreetCenterOutsideDistance() {
+    return this.getExteriorCenterDistanceForType('street', 'first');
+  },
+
+  getNearSidewalkOutsideDistance() {
+    return this.getExteriorCenterDistanceForType('sidewalk', 'first');
+  },
+
+  getFarSidewalkOutsideDistance() {
+    return this.getExteriorCenterDistanceForType('sidewalk', 'last');
+  },
+
+  getExteriorTraversalRowBounds() {
+    const edgeOverscanTiles = Math.max(0, Math.floor(EXTERIOR_MAP_STYLE.edgeOverscanTiles ?? 0));
+    return {
+      startRow: -edgeOverscanTiles,
+      endRow: this.mapRows + edgeOverscanTiles - 1
+    };
+  },
+
+  getExteriorTileCenter(row, outsideDistanceFromEntrance, mapLayout) {
+    return this.tileToScreen(row, -outsideDistanceFromEntrance, mapLayout);
+  },
+
+  getExteriorTileType(outsideDistanceFromEntrance) {
+    if (!Number.isFinite(outsideDistanceFromEntrance) || outsideDistanceFromEntrance < 1) {
+      return null;
+    }
+
+    let coveredDistance = 0;
+    for (const band of EXTERIOR_MAP_STYLE.tileBandsFromEntranceOutward) {
+      const bandWidth = Math.max(0, Math.floor(band.width ?? 0));
+      coveredDistance += bandWidth;
+      if (outsideDistanceFromEntrance <= coveredDistance) {
+        return band.type ?? null;
+      }
+    }
+
+    return null;
+  },
+
+  drawExteriorTile(context, center, mapLayout, tileType, variationIndex) {
+    const tileStyle = EXTERIOR_MAP_STYLE.tileTypes?.[tileType] ?? {};
+    const fallbackColor = tileStyle.fallbackColor ?? '#9ca3af';
+    const image = this.getAssetImage(tileStyle.assetPath);
+    const hasDrawableImage = image?.complete && image.naturalWidth > 0 && image.naturalHeight > 0;
+
+    context.beginPath();
+    context.moveTo(center.x, center.y - mapLayout.tileHeight / 2);
+    context.lineTo(center.x + mapLayout.tileWidth / 2, center.y);
+    context.lineTo(center.x, center.y + mapLayout.tileHeight / 2);
+    context.lineTo(center.x - mapLayout.tileWidth / 2, center.y);
+    context.closePath();
+
+    if (hasDrawableImage) {
+      context.save();
+      context.clip();
+      context.imageSmoothingEnabled = true;
+      context.drawImage(
+        image,
+        center.x - mapLayout.tileWidth / 2,
+        center.y - mapLayout.tileHeight / 2,
+        mapLayout.tileWidth,
+        mapLayout.tileHeight
+      );
+      context.restore();
+    } else {
+      const fallbackShade = variationIndex % 2 === 0 ? fallbackColor : this.tintHex(fallbackColor, -8);
+      context.fillStyle = fallbackShade;
+      context.fill();
+    }
+
+    context.strokeStyle = '#0f172a';
+    context.stroke();
+  },
+
+  drawExteriorGround(context, mapLayout) {
+    const { startRow, endRow } = this.getExteriorTraversalRowBounds();
+    const totalBandWidth = EXTERIOR_MAP_STYLE.tileBandsFromEntranceOutward.reduce((sum, band) => {
+      const width = Math.max(0, Math.floor(band.width ?? 0));
+      return sum + width;
+    }, 0);
+
+    if (totalBandWidth <= 0) {
+      return;
+    }
+
+    for (let row = startRow; row <= endRow; row += 1) {
+      for (let outsideDistance = totalBandWidth; outsideDistance >= 1; outsideDistance -= 1) {
+        const tileType = this.getExteriorTileType(outsideDistance);
+        if (!tileType) {
+          continue;
+        }
+
+        const center = this.getExteriorTileCenter(row, outsideDistance, mapLayout);
+        this.drawExteriorTile(context, center, mapLayout, tileType, row + outsideDistance);
+      }
+    }
+  },
+
   getMapLayout(canvasWidth, canvasHeight) {
     const padding = 0;
     const availableWidth = Math.max(220, canvasWidth - padding * 2);
@@ -180,14 +305,17 @@ export const layoutRenderMethods = {
   render(context, game) {
     const mapLayout = this.getMapLayout(game.canvas.width, game.canvas.height);
     this.drawMap(context, mapLayout);
+    this.drawPeople(context, 'outside');
+    this.drawWallOverlays(context, mapLayout);
     this.drawItems(context, mapLayout);
     this.drawPlacementPreview(context, mapLayout);
-    this.drawPeople(context);
+    this.drawPeople(context, 'inside');
     this.drawHud(context);
+    this.drawPeopleSatisfactionOverlay(context);
   },
 
   drawMap(context, mapLayout) {
-    this.drawSideWalls(context, mapLayout);
+    this.drawExteriorGround(context, mapLayout);
 
     let placementPreviewKeys = null;
     let placementValid = false;
@@ -260,6 +388,9 @@ export const layoutRenderMethods = {
       }
     }
 
+  },
+
+  drawEntranceWall(context, mapLayout) {
     const doorEdge = this.getLeftBorderEdge(this.entranceTile.row, mapLayout);
     const wallHeight = mapLayout.tileHeight * 2.9;
 
@@ -283,6 +414,11 @@ export const layoutRenderMethods = {
     context.lineTo(doorEdge.a.x, doorEdge.a.y - wallHeight * 0.72);
     context.closePath();
     context.fill();
+  },
+
+  drawWallOverlays(context, mapLayout) {
+    this.drawSideWalls(context, mapLayout);
+    this.drawEntranceWall(context, mapLayout);
   },
 
   drawSideWalls(context, mapLayout) {
@@ -673,8 +809,30 @@ export const layoutRenderMethods = {
     return Math.min(1, Math.max(0, 1 - remainingRatio));
   },
 
-  drawPeople(context) {
+  isPersonOutside(person) {
+    return (
+      person.state === 'to-entrance-sidewalk' ||
+      person.state === 'sidewalk-passing' ||
+      person.state === 'to-street' ||
+      person.state === 'street-to-entrance' ||
+      person.state === 'street-passing' ||
+      person.state === 'entering' ||
+      person.state === 'leaving' ||
+      person.state === 'leaving-cross-street' ||
+      person.state === 'leaving-far-sidewalk'
+    );
+  },
+
+  drawPeople(context, layer = 'inside') {
     for (const person of this.people) {
+      const isOutside = this.isPersonOutside(person);
+      if (layer === 'outside' && !isOutside) {
+        continue;
+      }
+      if (layer === 'inside' && isOutside) {
+        continue;
+      }
+
       if (person.id === this.selectedPersonId) {
         context.beginPath();
         context.arc(person.x, person.y, 10, 0, Math.PI * 2);
@@ -686,7 +844,10 @@ export const layoutRenderMethods = {
 
       context.beginPath();
       context.arc(person.x, person.y, 7, 0, Math.PI * 2);
-      context.fillStyle = person.customerType.color;
+      const personColor = person.hasCompletedCheckIn && person.customerType?.color
+        ? person.customerType.color
+        : '#9ca3af';
+      context.fillStyle = personColor;
       context.fill();
       context.strokeStyle = '#1e293b';
       context.stroke();
@@ -701,9 +862,30 @@ export const layoutRenderMethods = {
         context.restore();
       }
 
-      if (person.state === 'leaving') {
-        drawText(context, `${Math.round(person.visitSatisfaction)}`, person.x - 7, person.y - 17, '#f8fafc');
+    }
+  },
+
+  drawPeopleSatisfactionOverlay(context) {
+    for (const person of this.people) {
+      if (!person.showLeaveSatisfaction) {
+        continue;
       }
+
+      context.save();
+      context.font = '12px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+      context.fillStyle = '#f8fafc';
+      context.strokeStyle = '#020617';
+      context.lineWidth = 3;
+      context.textAlign = 'center';
+      context.textBaseline = 'bottom';
+
+      const satisfactionText = `${Math.round(person.visitSatisfaction)}`;
+      const labelX = person.x;
+      const labelY = person.y - 11;
+
+      context.strokeText(satisfactionText, labelX, labelY);
+      context.fillText(satisfactionText, labelX, labelY);
+      context.restore();
     }
   },
 

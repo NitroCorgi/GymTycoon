@@ -3,6 +3,7 @@ import { interactionUiMethods } from './mainScene/interactionUiMethods.js';
 import { layoutRenderMethods } from './mainScene/layoutRenderMethods.js';
 import {
   CUSTOMER_TYPES,
+  FREE_MODE_DIFFICULTIES,
   FIRST_NAMES,
   FREE_MODE_LOCATIONS,
   ITEM_CATALOG,
@@ -29,6 +30,10 @@ export class MainScene {
 
   getDefaultLocationConfig() {
     return FREE_MODE_LOCATIONS[0];
+  }
+
+  getDefaultDifficultyConfig() {
+    return FREE_MODE_DIFFICULTIES.find((difficulty) => difficulty.id === 'medium') ?? FREE_MODE_DIFFICULTIES[0];
   }
 
   createTileAvailabilityGrid(rows, cols, mapAreas) {
@@ -83,10 +88,15 @@ export class MainScene {
     return this.tileAvailability?.[row]?.[col] === true;
   }
 
-  startNewGame(locationConfig = this.getDefaultLocationConfig()) {
+  startNewGame(
+    locationConfig = this.getDefaultLocationConfig(),
+    difficultyConfig = this.getDefaultDifficultyConfig()
+  ) {
     const selectedLocation = locationConfig ?? this.getDefaultLocationConfig();
+    const selectedDifficulty = difficultyConfig ?? this.getDefaultDifficultyConfig();
 
     this.locationId = selectedLocation.id;
+    this.difficultyId = selectedDifficulty.id;
     this.mapRows = selectedLocation.mapRows ?? 8;
     this.mapCols = selectedLocation.mapCols ?? 8;
     this.tileAvailability = this.createTileAvailabilityGrid(
@@ -95,7 +105,7 @@ export class MainScene {
       selectedLocation.mapAreas
     );
 
-    this.money = 50000;
+    this.money = selectedDifficulty.startingBank ?? 50000;
     this.subscriptionFee = 30;
     this.rentAmount = selectedLocation.monthlyRent ?? 1000;
     this.monthlyEncountersBase = selectedLocation.monthlyEncountersBase ?? 20;
@@ -105,15 +115,25 @@ export class MainScene {
     this.cycleIntervalSeconds = 45;
     this.cycleTimer = 0;
     this.lastCycleIncome = 0;
+    this.lastCycleDayTicketIncome = 0;
     this.lastCycleChurn = 0;
     this.lastCycleGained = 0;
     this.currentCycleGained = 0;
     this.currentCycleChurn = 0;
+    this.currentCycleDayTicketIncome = 0;
     this.monthSatisfactionSum = 0;
     this.monthSatisfactionCount = 0;
     this.currentMonth = 1;
     this.currentYear = 26;
     this.monthlyStatistics = [];
+    this.monthlyBankHistory = [];
+    this.monthlyPopularityHistory = [];
+    this.monthlyCostsHistory = [];
+    this.monthlyProjectedIncomeHistory = [];
+    this.monthlyMemberHistory = [];
+    this.monthlyLockerTurnedDownHistory = [];
+    this.monthlySatisfactionHistory = [];
+    this.currentCycleLockerTurnedDown = 0;
     this.monthStartBank = this.money;
 
     this.buyMode = false;
@@ -154,13 +174,14 @@ export class MainScene {
 
     this.debugVisible = false;
     this.memberListVisible = false;
-    this.statisticsVisible = false;
+    this.activeStatisticKey = null;
     this.selectedDeviceId = null;
     this.selectedDecor = null;
     this.selectedPersonId = null;
     this.lastMapLayout = null;
 
     this.buildBuyPanelButtons();
+    this.recordMonthlyMetricsSnapshot(this.getCurrentMonthLabel());
     this.refreshUi();
   }
 
@@ -174,9 +195,11 @@ export class MainScene {
       buyTabDevicesButton,
       buyTabFacilitiesButton,
       buyTabDecorButton,
+      metricStatButtons,
       subscriptionInput,
       monthlyCostsValue,
-      statisticsButton,
+      statsModal,
+      statsModalCloseButton,
       sellDeviceButton
     } = this.ui;
 
@@ -232,8 +255,24 @@ export class MainScene {
       this.refreshUi();
     });
 
-    statisticsButton?.addEventListener('click', () => {
-      this.statisticsVisible = !this.statisticsVisible;
+    metricStatButtons?.forEach((button) => {
+      button.addEventListener('click', () => {
+        const statKey = button.dataset.statKey;
+        if (!statKey) return;
+
+        this.activeStatisticKey = this.activeStatisticKey === statKey ? null : statKey;
+        this.updateUiMetrics();
+      });
+    });
+
+    statsModalCloseButton?.addEventListener('click', () => {
+      this.activeStatisticKey = null;
+      this.updateUiMetrics();
+    });
+
+    statsModal?.addEventListener('click', (event) => {
+      if (event.target !== statsModal) return;
+      this.activeStatisticKey = null;
       this.updateUiMetrics();
     });
 
@@ -441,7 +480,9 @@ export class MainScene {
     const monthlyCosts = this.getMonthlyCosts();
     const subscriptionIncome = this.subscriptionFee * this.members;
     this.lastCycleIncome = subscriptionIncome;
-    this.money = Math.max(0, this.money - monthlyCosts + subscriptionIncome);
+    this.lastCycleDayTicketIncome = this.currentCycleDayTicketIncome;
+    this.currentCycleDayTicketIncome = 0;
+    this.money = this.money - monthlyCosts + subscriptionIncome;
     const monthlyProfit = this.money - this.monthStartBank;
     this.recordMonthlyStatistics({
       monthLabel,
@@ -449,8 +490,44 @@ export class MainScene {
       membersLost: this.lastCycleChurn,
       profit: monthlyProfit
     });
+    this.recordMonthlyMetricsSnapshot(monthLabel);
+    this.currentCycleLockerTurnedDown = 0;
     this.monthStartBank = this.money;
     this.advanceMonth();
+  }
+
+  recordMonthlyMetricsSnapshot(monthLabel) {
+    const projectedMembersIncome = this.members * this.subscriptionFee;
+    const projectedDayTicketIncome = this.lastCycleDayTicketIncome;
+
+    this.monthlyBankHistory.unshift({ monthLabel, value: this.money });
+    this.monthlyPopularityHistory.unshift({ monthLabel, value: this.popularity });
+    this.monthlyCostsHistory.unshift({ monthLabel, value: this.getMonthlyCosts() });
+    this.monthlyProjectedIncomeHistory.unshift({
+      monthLabel,
+      membersIncome: projectedMembersIncome,
+      dayTicketIncome: projectedDayTicketIncome,
+      value: projectedMembersIncome + projectedDayTicketIncome
+    });
+    this.monthlyMemberHistory.unshift({ monthLabel, value: this.members });
+    this.monthlyLockerTurnedDownHistory.unshift({ monthLabel, value: this.currentCycleLockerTurnedDown });
+    this.monthlySatisfactionHistory.unshift({ monthLabel, value: this.getAverageSatisfaction() });
+
+    const collections = [
+      this.monthlyBankHistory,
+      this.monthlyPopularityHistory,
+      this.monthlyCostsHistory,
+      this.monthlyProjectedIncomeHistory,
+      this.monthlyMemberHistory,
+      this.monthlyLockerTurnedDownHistory,
+      this.monthlySatisfactionHistory
+    ];
+
+    for (const collection of collections) {
+      if (collection.length > 6) {
+        collection.length = 6;
+      }
+    }
   }
 
   getCurrentMonthLabel() {
@@ -503,8 +580,22 @@ export class MainScene {
   }
 
   spawnIncomingPerson(mapLayout) {
-    const entryPoints = this.getEntrancePoints(mapLayout);
-    const customerType = CUSTOMER_TYPES[Math.floor(Math.random() * CUSTOMER_TYPES.length)];
+    const nearSidewalkOutsideDistance = this.getNearSidewalkOutsideDistance() ?? 1;
+    const { startRow, endRow } = this.getExteriorTraversalRowBounds();
+    const entersFromTop = Math.random() < 0.5;
+    const spawnRow = entersFromTop ? startRow : endRow;
+    const passThroughRow = entersFromTop ? endRow : startRow;
+
+    const spawnPoint = this.getExteriorTileCenter(spawnRow, nearSidewalkOutsideDistance, mapLayout);
+    const entryDecisionPopularity = Math.min(100, Math.max(0, Math.floor(this.popularity)));
+    const wantsToEnterGym = Math.random() < entryDecisionPopularity / 100;
+    const sidewalkTargetRow = wantsToEnterGym ? this.entranceTile.row : passThroughRow;
+    const sidewalkTravelPoint = this.getExteriorTileCenter(
+      sidewalkTargetRow,
+      nearSidewalkOutsideDistance,
+      mapLayout
+    );
+
     const visitingMember =
       this.memberProfiles.length > 0 && Math.random() < this.getReturningMemberVisitChance()
         ? this.memberProfiles[Math.floor(Math.random() * this.memberProfiles.length)]
@@ -513,14 +604,20 @@ export class MainScene {
 
     this.people.push({
       id: this.nextPersonId,
-      x: entryPoints.outside.x,
-      y: entryPoints.outside.y,
+      x: spawnPoint.x,
+      y: spawnPoint.y,
       speed: 60 + Math.random() * 25,
       name: visitingMember?.name ?? this.pickRandomName(),
-      customerType,
-      state: 'entering',
-      targetX: entryPoints.inside.x,
-      targetY: entryPoints.inside.y,
+      customerType: null,
+      state: wantsToEnterGym ? 'to-entrance-sidewalk' : 'sidewalk-passing',
+      targetX: sidewalkTravelPoint.x,
+      targetY: sidewalkTravelPoint.y,
+      entersFromTop,
+      passThroughRow,
+      wantsToEnterGym,
+      entryDecisionPopularity,
+      hasCompletedCheckIn: false,
+      nearSidewalkOutsideDistance,
       targetItemId: null,
       destinationType: null,
       destinationItemKey: null,
@@ -547,7 +644,8 @@ export class MainScene {
       thoughtNoLocker: false,
       thoughtBrokenDevices: false,
       thoughtPriceTooHigh: false,
-      thoughtPriceGreatDeal: false
+      thoughtPriceGreatDeal: false,
+      showLeaveSatisfaction: false
     });
 
     this.nextPersonId += 1;
@@ -606,16 +704,21 @@ export class MainScene {
     return `${firstName} ${lastName}`;
   }
 
+  pickRandomCustomerType() {
+    return CUSTOMER_TYPES[Math.floor(Math.random() * CUSTOMER_TYPES.length)];
+  }
+
   syncMemberCount() {
     this.members = this.memberProfiles.length;
   }
 
   createMemberProfile(person) {
+    const customerType = person.customerType ?? this.pickRandomCustomerType();
     const profile = {
       id: this.nextMemberId,
       name: this.pickRandomName(),
-      type: person.customerType.preferredType,
-      color: person.customerType.color,
+      type: customerType.preferredType,
+      color: customerType.color,
       monthsSubscribed: 0,
       lastVisitSatisfaction: this.clampSatisfaction(Math.round(person.visitSatisfaction))
     };

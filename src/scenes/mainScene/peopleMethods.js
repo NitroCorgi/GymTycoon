@@ -1,4 +1,5 @@
 import {
+  CUSTOMER_TYPES,
   getItemUsageSeconds,
   ITEM_CATALOG,
   REPAIR_SECONDS
@@ -67,6 +68,46 @@ export const peopleMethods = {
         continue;
       }
 
+      if (person.state === 'to-street') {
+        this.handleReachedStreet(person, mapLayout);
+        continue;
+      }
+
+      if (person.state === 'street-to-entrance') {
+        this.handleReachedStreetEntranceRow(person, mapLayout);
+        continue;
+      }
+
+      if (person.state === 'to-entrance-sidewalk') {
+        this.handleReachedEntranceSidewalk(person, mapLayout);
+        continue;
+      }
+
+      if (person.state === 'leaving-door') {
+        this.handleReachedExitDoor(person, mapLayout);
+        continue;
+      }
+
+      if (person.state === 'leaving-cross-street') {
+        this.handleReachedLeavingStreet(person, mapLayout);
+        continue;
+      }
+
+      if (person.state === 'leaving-far-sidewalk') {
+        this.handleReachedLeavingFarSidewalk(person, mapLayout);
+        continue;
+      }
+
+      if (person.state === 'street-passing') {
+        person.state = 'remove';
+        continue;
+      }
+
+      if (person.state === 'sidewalk-passing') {
+        person.state = 'remove';
+        continue;
+      }
+
       if (person.state === 'to-check-in') {
         this.tryStartCheckIn(person, mapLayout);
         continue;
@@ -106,14 +147,8 @@ export const peopleMethods = {
 
   handleEnteredGym(person, mapLayout) {
     this.initializeVisitSatisfaction(person);
-
-    const preferredType = person.customerType.preferredType;
-    const hasPreferredDevice = this.items.some(
-      (item) => ITEM_CATALOG[item.key].type === preferredType && !this.isItemBroken(item)
-    );
-
-    person.canSubscribe = hasPreferredDevice;
-    person.unhappy = !hasPreferredDevice;
+    person.canSubscribe = true;
+    person.unhappy = false;
 
     if (this.hasAnyCheckInItems()) {
       if (!this.assignCheckInToPerson(person, mapLayout)) {
@@ -121,6 +156,9 @@ export const peopleMethods = {
       }
       return;
     }
+
+    this.assignCustomerTypeAfterEntry(person);
+    person.hasCompletedCheckIn = true;
 
     if (!this.assignLockerToPerson(person, mapLayout)) {
       person.thoughtNoLocker = true;
@@ -297,6 +335,7 @@ export const peopleMethods = {
   handleCompletedTrainingPlan(person, mapLayout) {
     person.destinationType = null;
     person.destinationItemKey = null;
+    person.showLeaveSatisfaction = true;
 
     if (person.plansShower) {
       if (this.assignShowerToPerson(person, mapLayout)) {
@@ -494,6 +533,16 @@ export const peopleMethods = {
     }
     person.targetItemId = null;
 
+    this.assignCustomerTypeAfterEntry(person);
+    person.hasCompletedCheckIn = true;
+
+    const preferredType = person.customerType?.preferredType;
+    const hasPreferredDevice = preferredType
+      ? this.items.some((item) => ITEM_CATALOG[item.key].type === preferredType && !this.isItemBroken(item))
+      : false;
+    person.canSubscribe = hasPreferredDevice;
+    person.unhappy = !hasPreferredDevice;
+
     const lockerAssigned = this.assignLockerToPerson(person, mapLayout);
     if (!lockerAssigned) {
       this.setSatisfaction(person, 0);
@@ -502,7 +551,9 @@ export const peopleMethods = {
     }
 
     if (!person.isMember && !person.paidDailyTicket) {
-      this.money += Math.floor(this.subscriptionFee / 2);
+      const dayTicketIncome = Math.floor(this.subscriptionFee / 2);
+      this.money += dayTicketIncome;
+      this.currentCycleDayTicketIncome += dayTicketIncome;
       person.paidDailyTicket = true;
     }
   },
@@ -511,6 +562,7 @@ export const peopleMethods = {
     const freeLocker = this.findLockerWithFreeSlot();
     if (!freeLocker) {
       person.thoughtNoLocker = true;
+      this.currentCycleLockerTurnedDown += 1;
       return false;
     }
 
@@ -739,13 +791,16 @@ export const peopleMethods = {
 
   finalizePersonExit(person, mapLayout) {
     const entryPoints = this.getEntrancePoints(mapLayout);
+    const { startRow, endRow } = this.getExteriorTraversalRowBounds();
+    const exitSidewalkEdgeRow = Math.random() < 0.5 ? startRow : endRow;
 
     this.trySubscribePerson(person);
     this.registerVisitSatisfaction(person);
 
-    person.state = 'leaving';
-    person.targetX = entryPoints.outside.x;
-    person.targetY = entryPoints.outside.y;
+    person.state = 'leaving-door';
+    person.targetX = entryPoints.inside.x;
+    person.targetY = entryPoints.inside.y;
+    person.exitSidewalkEdgeRow = exitSidewalkEdgeRow;
     person.targetItemId = null;
     person.queuedItemId = null;
     person.queueSeconds = 0;
@@ -843,7 +898,7 @@ export const peopleMethods = {
   },
 
   pickDestinationTypeForPerson(person, excludeType) {
-    const preferredType = person.customerType.preferredType;
+    const preferredType = person.customerType?.preferredType ?? null;
     const availableTypes = [
       ...new Set(
         this.items
@@ -858,7 +913,7 @@ export const peopleMethods = {
       )
     ];
 
-    const preferredAllowed = preferredType !== excludeType && availableTypes.includes(preferredType);
+    const preferredAllowed = preferredType && preferredType !== excludeType && availableTypes.includes(preferredType);
     if (preferredAllowed) {
       return preferredType;
     }
@@ -1024,5 +1079,81 @@ export const peopleMethods = {
     person.x += (dx / distance) * moveDistance;
     person.y += (dy / distance) * moveDistance;
     return false;
+  },
+
+  assignCustomerTypeAfterEntry(person) {
+    if (person.customerType?.preferredType) {
+      return;
+    }
+
+    if (person.isMember && person.memberId !== null) {
+      const memberProfile = this.memberProfiles.find((entry) => entry.id === person.memberId);
+      const memberType = CUSTOMER_TYPES.find((entry) => entry.preferredType === memberProfile?.type);
+      if (memberType) {
+        person.customerType = memberType;
+        return;
+      }
+    }
+
+    person.customerType = this.pickRandomCustomerType();
+  },
+
+  handleReachedStreet(person, mapLayout) {
+    const streetOutsideDistance = person.streetOutsideDistance ?? this.getStreetCenterOutsideDistance() ?? 1;
+    const targetRow = person.wantsToEnterGym ? this.entranceTile.row : person.passThroughRow;
+    const targetPoint = this.getExteriorTileCenter(targetRow, streetOutsideDistance, mapLayout);
+
+    person.state = person.wantsToEnterGym ? 'street-to-entrance' : 'street-passing';
+    person.targetX = targetPoint.x;
+    person.targetY = targetPoint.y;
+  },
+
+  handleReachedStreetEntranceRow(person, mapLayout) {
+    const nearSidewalkOutsideDistance =
+      person.nearSidewalkOutsideDistance ?? this.getNearSidewalkOutsideDistance() ?? 1;
+    const sidewalkPoint = this.getExteriorTileCenter(this.entranceTile.row, nearSidewalkOutsideDistance, mapLayout);
+
+    person.state = 'to-entrance-sidewalk';
+    person.targetX = sidewalkPoint.x;
+    person.targetY = sidewalkPoint.y;
+  },
+
+  handleReachedEntranceSidewalk(person, mapLayout) {
+    const entryPoints = this.getEntrancePoints(mapLayout);
+
+    person.state = 'entering';
+    person.targetX = entryPoints.inside.x;
+    person.targetY = entryPoints.inside.y;
+  },
+
+  handleReachedExitDoor(person, mapLayout) {
+    const streetOutsideDistance = this.getStreetCenterOutsideDistance() ?? 1;
+    const streetPoint = this.getExteriorTileCenter(this.entranceTile.row, streetOutsideDistance, mapLayout);
+
+    person.state = 'leaving-cross-street';
+    person.targetX = streetPoint.x;
+    person.targetY = streetPoint.y;
+  },
+
+  handleReachedLeavingStreet(person, mapLayout) {
+    const farSidewalkOutsideDistance = this.getFarSidewalkOutsideDistance() ?? this.getNearSidewalkOutsideDistance() ?? 1;
+    const farSidewalkPoint = this.getExteriorTileCenter(this.entranceTile.row, farSidewalkOutsideDistance, mapLayout);
+
+    person.state = 'leaving-far-sidewalk';
+    person.targetX = farSidewalkPoint.x;
+    person.targetY = farSidewalkPoint.y;
+  },
+
+  handleReachedLeavingFarSidewalk(person, mapLayout) {
+    const farSidewalkOutsideDistance = this.getFarSidewalkOutsideDistance() ?? this.getNearSidewalkOutsideDistance() ?? 1;
+    const { startRow, endRow } = this.getExteriorTraversalRowBounds();
+    const exitRow = Number.isFinite(person.exitSidewalkEdgeRow)
+      ? person.exitSidewalkEdgeRow
+      : (Math.random() < 0.5 ? startRow : endRow);
+    const exitPoint = this.getExteriorTileCenter(exitRow, farSidewalkOutsideDistance, mapLayout);
+
+    person.state = 'leaving';
+    person.targetX = exitPoint.x;
+    person.targetY = exitPoint.y;
   }
 };

@@ -5,7 +5,7 @@ import { SceneManager } from './systems/SceneManager.js';
 import { MainScene } from './scenes/MainScene.js';
 import { LocationScene } from './scenes/LocationScene.js';
 import { TitleScene } from './scenes/TitleScene.js';
-import { FREE_MODE_LOCATIONS } from './scenes/mainSceneConfig.js';
+import { FREE_MODE_DIFFICULTIES, FREE_MODE_LOCATIONS } from './scenes/mainSceneConfig.js';
 import { getGameUi } from './ui/getGameUi.js';
 
 const ui = getGameUi();
@@ -24,9 +24,11 @@ sceneManager.register(
   'location',
   new LocationScene({
     ui,
-    onSelectLocation: (locationId) => {
+    onStartGame: ({ locationId, difficultyId }) => {
       const selectedLocation = FREE_MODE_LOCATIONS.find((location) => location.id === locationId) ?? FREE_MODE_LOCATIONS[0];
-      mainScene.startNewGame(selectedLocation);
+      const selectedDifficulty = FREE_MODE_DIFFICULTIES.find((difficulty) => difficulty.id === difficultyId)
+        ?? FREE_MODE_DIFFICULTIES[0];
+      mainScene.startNewGame(selectedLocation, selectedDifficulty);
       sceneManager.setActive('main');
     }
   })

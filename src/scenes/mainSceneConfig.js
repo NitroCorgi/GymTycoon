@@ -18,7 +18,7 @@ export const ITEM_CATALOG = {
     monthlyCost: 0,
     checkInSeconds: 0,
     popularity: 2,
-    initialBreakChance: 0.1,
+    initialBreakChance: 0.05,
     color: '#38bdf8',
     assetGroundScale: 1,
     assetOffsetXByRotation: [-0.07, -0.02, 0, 0],
@@ -38,7 +38,7 @@ export const ITEM_CATALOG = {
     monthlyCost: 0,
     checkInSeconds: 0,
     popularity: 3,
-    initialBreakChance: 0.1,
+    initialBreakChance: 0.05,
     color: '#fb7185'
   },
   dumbbellStation: {
@@ -280,7 +280,7 @@ export const ITEM_CATALOG = {
     checkInSeconds: 0,
     lockerCapacity: 0,
     popularity: 0,
-    initialBreakChance: 0,
+    initialBreakChance: 0.02,
     color: '#64748b'
   },
   floorTilesWood: {
@@ -405,6 +405,43 @@ export const FREE_MODE_LOCATIONS = [
     monthlyEncountersGrowth: 3
   }
 ];
+
+export const FREE_MODE_DIFFICULTIES = [
+  {
+    id: 'easy',
+    label: 'Easy',
+    startingBank: 100000
+  },
+  {
+    id: 'medium',
+    label: 'Medium',
+    startingBank: 50000
+  },
+  {
+    id: 'hard',
+    label: 'Hard',
+    startingBank: 30000
+  }
+];
+
+export const EXTERIOR_MAP_STYLE = {
+  edgeOverscanTiles: 10,
+  tileBandsFromEntranceOutward: [
+    { type: 'sidewalk', width: 2 },
+    { type: 'street', width: 5 },
+    { type: 'sidewalk', width: 2 }
+  ],
+  tileTypes: {
+    sidewalk: {
+      assetPath: '/assets/tiles/sidewalk/sidewalk-tile.png',
+      fallbackColor: '#d1d5db'
+    },
+    street: {
+      assetPath: '/assets/tiles/street/street-tile.png',
+      fallbackColor: '#374151'
+    }
+  }
+};
 
 export function getItemUsageSeconds(itemKey) {
   const item = ITEM_CATALOG[itemKey];
