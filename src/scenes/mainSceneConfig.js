@@ -324,6 +324,16 @@ export const CUSTOMER_TYPES = [
     id: 'yellow',
     color: '#facc15',
     preferredType: 'weightlifting'
+  },
+  {
+    id: 'functional',
+    color: '#34d399',
+    preferredType: 'functional'
+  },
+  {
+    id: 'relax',
+    color: '#a78bfa',
+    preferredType: 'recovery'
   }
 ];
 

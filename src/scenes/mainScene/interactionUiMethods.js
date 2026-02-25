@@ -700,6 +700,7 @@ export const interactionUiMethods = {
 
     const {
       bankValue,
+      bankWarningMessage,
       popularityValue,
       monthlyCostsValue,
       projectedIncomeValue,
@@ -735,6 +736,14 @@ export const interactionUiMethods = {
     if (bankValue) {
       bankValue.textContent = this.formatSignedEuro(this.money);
       bankValue.classList.toggle('is-danger', this.money < 0);
+    }
+    if (bankWarningMessage) {
+      const gameOverLimit = this.gameOverBankLimit ?? -50000;
+      const shouldShowWarning = this.money < 0 && this.money > gameOverLimit;
+      bankWarningMessage.classList.toggle('is-open', shouldShowWarning);
+      bankWarningMessage.textContent = `Warning: Game over at -€${this.formatNumberWithThousands(
+        Math.abs(gameOverLimit)
+      )}.`;
     }
     if (popularityValue) popularityValue.textContent = this.getPopularityStars();
     if (monthlyCostsValue) monthlyCostsValue.textContent = this.formatEuro(this.getMonthlyCosts());
@@ -836,7 +845,7 @@ export const interactionUiMethods = {
         bodyElement,
         [...this.monthlyBankHistory].reverse(),
         (entry) => entry.value,
-        (value) => this.formatEuro(value),
+        (value) => this.formatSignedEuro(value),
         {
           yAxisLabel: 'EUR'
         }
@@ -945,6 +954,51 @@ export const interactionUiMethods = {
     return element;
   },
 
+  getChartDomain(values) {
+    const numericValues = values
+      .map((value) => Number(value))
+      .filter((value) => Number.isFinite(value));
+
+    if (numericValues.length === 0) {
+      return { minValue: 0, maxValue: 1, range: 1 };
+    }
+
+    let minValue = Math.min(...numericValues);
+    let maxValue = Math.max(...numericValues);
+
+    if (minValue === maxValue) {
+      if (minValue === 0) {
+        maxValue = 1;
+      } else {
+        const padding = Math.abs(minValue) * 0.1;
+        minValue -= padding;
+        maxValue += padding;
+      }
+    }
+
+    const range = maxValue - minValue || 1;
+    return { minValue, maxValue, range };
+  },
+
+  getChartYTickValues(minValue, maxValue) {
+    const values = [maxValue, minValue + (maxValue - minValue) / 2, minValue];
+
+    if (minValue < 0 && maxValue > 0) {
+      values.push(0);
+    }
+
+    const sorted = values.sort((a, b) => b - a);
+    const uniqueValues = [];
+    for (const value of sorted) {
+      const duplicate = uniqueValues.some((existing) => Math.abs(existing - value) < 0.0001);
+      if (!duplicate) {
+        uniqueValues.push(value);
+      }
+    }
+
+    return uniqueValues;
+  },
+
   renderLineChart(container, entries, valueAccessor, valueFormatter, options = {}) {
     const safeEntries = Array.isArray(entries) ? entries.slice(-6) : [];
     if (safeEntries.length === 0) {
@@ -963,7 +1017,10 @@ export const interactionUiMethods = {
     const top = 16;
     const width = 512;
     const height = 168;
-    const maxValue = Math.max(1, ...safeEntries.map((entry) => Number(valueAccessor(entry) || 0)));
+    const values = safeEntries.map((entry) => Number(valueAccessor(entry) || 0));
+    const { minValue, maxValue, range } = this.getChartDomain(values);
+    const toChartY = (value) => top + height - ((value - minValue) / range) * height;
+    const axisXPosition = toChartY(0);
 
     const axisY = this.createChartSvgElement('line', {
       x1: left,
@@ -975,18 +1032,18 @@ export const interactionUiMethods = {
     });
     const axisX = this.createChartSvgElement('line', {
       x1: left,
-      y1: top + height,
+      y1: axisXPosition,
       x2: left + width,
-      y2: top + height,
+      y2: axisXPosition,
       stroke: '#2f435f',
       'stroke-width': 1
     });
     svg.appendChild(axisY);
     svg.appendChild(axisX);
 
-    const yTickValues = [maxValue, maxValue / 2, 0];
+    const yTickValues = this.getChartYTickValues(minValue, maxValue);
     for (const tickValue of yTickValues) {
-      const y = top + height - (tickValue / maxValue) * height;
+      const y = toChartY(tickValue);
       const tickMark = this.createChartSvgElement('line', {
         x1: left - 4,
         y1: y,
@@ -1024,7 +1081,7 @@ export const interactionUiMethods = {
     const points = safeEntries.map((entry, index) => {
       const value = Number(valueAccessor(entry) || 0);
       const x = left + (safeEntries.length === 1 ? width / 2 : (width * index) / (safeEntries.length - 1));
-      const y = top + height - (value / maxValue) * height;
+      const y = toChartY(value);
       return { x, y, value, label: entry.monthLabel };
     });
 
@@ -1057,7 +1114,7 @@ export const interactionUiMethods = {
 
     const maxLabel = document.createElement('p');
     maxLabel.className = 'stats-legend-item';
-    maxLabel.textContent = `Max: ${valueFormatter(maxValue)}`;
+    maxLabel.textContent = `Range: ${valueFormatter(minValue)} to ${valueFormatter(maxValue)}`;
 
     chart.appendChild(svg);
     container.appendChild(chart);
@@ -1082,7 +1139,10 @@ export const interactionUiMethods = {
     const top = 16;
     const width = 512;
     const height = 168;
-    const maxValue = Math.max(1, ...safeEntries.map((entry) => Number(valueAccessor(entry) || 0)));
+    const values = safeEntries.map((entry) => Number(valueAccessor(entry) || 0));
+    const { minValue, maxValue, range } = this.getChartDomain(values);
+    const toChartY = (value) => top + height - ((value - minValue) / range) * height;
+    const baselineY = toChartY(0);
     const slotWidth = width / safeEntries.length;
     const barWidth = slotWidth * 0.62;
 
@@ -1096,18 +1156,18 @@ export const interactionUiMethods = {
     });
     const axisX = this.createChartSvgElement('line', {
       x1: left,
-      y1: top + height,
+      y1: baselineY,
       x2: left + width,
-      y2: top + height,
+      y2: baselineY,
       stroke: '#2f435f',
       'stroke-width': 1
     });
     svg.appendChild(axisY);
     svg.appendChild(axisX);
 
-    const yTickValues = [maxValue, maxValue / 2, 0];
+    const yTickValues = this.getChartYTickValues(minValue, maxValue);
     for (const tickValue of yTickValues) {
-      const y = top + height - (tickValue / maxValue) * height;
+      const y = toChartY(tickValue);
       const tickMark = this.createChartSvgElement('line', {
         x1: left - 4,
         y1: y,
@@ -1145,9 +1205,10 @@ export const interactionUiMethods = {
     for (let index = 0; index < safeEntries.length; index += 1) {
       const entry = safeEntries[index];
       const value = Number(valueAccessor(entry) || 0);
-      const barHeight = (value / maxValue) * height;
+      const valueY = toChartY(value);
+      const y = Math.min(baselineY, valueY);
+      const barHeight = Math.abs(valueY - baselineY);
       const x = left + slotWidth * index + (slotWidth - barWidth) / 2;
-      const y = top + height - barHeight;
 
       const bar = this.createChartSvgElement('rect', {
         x,
@@ -1171,7 +1232,7 @@ export const interactionUiMethods = {
 
     const maxLabel = document.createElement('p');
     maxLabel.className = 'stats-legend-item';
-    maxLabel.textContent = `Max: ${valueFormatter(maxValue)}`;
+    maxLabel.textContent = `Range: ${valueFormatter(minValue)} to ${valueFormatter(maxValue)}`;
 
     chart.appendChild(svg);
     container.appendChild(chart);

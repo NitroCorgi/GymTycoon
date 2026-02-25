@@ -27,6 +27,22 @@ body {
   padding: 0.9rem;
 }
 
+.bank-warning {
+  margin: -0.35rem 0 0;
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.7rem;
+  border: 1px solid #7f1d1d;
+  background: #3f1217;
+  color: #fecaca;
+  font-size: 0.86rem;
+  font-weight: 700;
+  display: none;
+}
+
+.bank-warning.is-open {
+  display: block;
+}
+
 .topbar {
   display: grid;
   grid-template-columns: repeat(8, minmax(0, 1fr));
@@ -151,6 +167,56 @@ body {
 
 .location-screen.is-open {
   display: grid;
+}
+
+.game-over-screen {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-content: center;
+  justify-items: center;
+  gap: 0.9rem;
+  padding: 1rem;
+  background: rgb(7 12 22 / 62%);
+  z-index: 13;
+}
+
+.game-over-screen.is-open {
+  display: grid;
+}
+
+.game-over-screen h2 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 2.7rem);
+  color: #e2e8f0;
+}
+
+.game-over-screen p {
+  margin: 0;
+  color: #cbd5e1;
+  text-align: center;
+  font-size: 1.05rem;
+}
+
+#game-over-bank-value {
+  color: #fecaca;
+}
+
+#game-over-menu-btn {
+  border: 1px solid #344760;
+  border-radius: 0.65rem;
+  background: #142034;
+  color: #dbe8fb;
+  font-weight: 600;
+  padding: 0.7rem 1rem;
+  cursor: pointer;
+}
+
+#game-over-menu-btn:hover,
+#game-over-menu-btn:focus-visible {
+  border-color: #6ea0ff;
+  background: #1a2d47;
+  outline: none;
 }
 
 .location-screen h2 {
@@ -281,6 +347,7 @@ body {
 }
 
 #app.is-title-screen .topbar,
+#app.is-title-screen .bank-warning,
 #app.is-title-screen .customer-card,
 #app.is-title-screen .buy-dock {
   display: none;

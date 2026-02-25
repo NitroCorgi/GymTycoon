@@ -5,6 +5,7 @@ import { SceneManager } from './systems/SceneManager.js';
 import { MainScene } from './scenes/MainScene.js';
 import { LocationScene } from './scenes/LocationScene.js';
 import { TitleScene } from './scenes/TitleScene.js';
+import { GameOverScene } from './scenes/GameOverScene.js';
 import { FREE_MODE_DIFFICULTIES, FREE_MODE_LOCATIONS } from './scenes/mainSceneConfig.js';
 import { getGameUi } from './ui/getGameUi.js';
 
@@ -17,9 +18,20 @@ if (!(canvas instanceof HTMLCanvasElement)) {
 
 const input = new Input();
 const sceneManager = new SceneManager();
-const mainScene = new MainScene({ ui });
+const gameOverScene = new GameOverScene({
+  ui,
+  onReturnToMenu: () => sceneManager.setActive('title')
+});
+const mainScene = new MainScene({
+  ui,
+  onGameOver: ({ bank }) => {
+    gameOverScene.setResult({ bank });
+    sceneManager.setActive('game-over');
+  }
+});
 
 sceneManager.register('main', mainScene);
+sceneManager.register('game-over', gameOverScene);
 sceneManager.register(
   'location',
   new LocationScene({

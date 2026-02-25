@@ -21,6 +21,11 @@ src/
   utils/       # generic utility helpers
 ```
 
+### MainScene People Modules
+
+The `MainScene` people behavior is split into focused modules under `src/scenes/mainScene/people/`.
+See `src/scenes/mainScene/people/README.md` for responsibilities and maintenance notes.
+
 ## Getting Started
 
 ### Prerequisites

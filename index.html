@@ -55,6 +55,7 @@
           />
         </label>
       </header>
+      <p id="bank-warning-message" class="bank-warning" role="status" aria-live="polite"></p>
       <main class="game-shell">
         <canvas id="game-canvas" aria-label="Game canvas"></canvas>
         <section id="title-screen" class="title-screen" aria-label="Title screen">
@@ -165,6 +166,12 @@
             </div>
           </div>
           <button id="location-start-btn" class="location-start-btn" type="button" disabled>Start Game</button>
+        </section>
+
+        <section id="game-over-screen" class="game-over-screen" aria-label="Game over screen">
+          <h2>Game Over</h2>
+          <p>Your gym bank dropped to <strong id="game-over-bank-value">-€50.000</strong>.</p>
+          <button id="game-over-menu-btn" type="button">Return to Main Menu</button>
         </section>
 
         <section id="stats-modal" class="stats-modal" aria-label="Statistics window" aria-hidden="true">

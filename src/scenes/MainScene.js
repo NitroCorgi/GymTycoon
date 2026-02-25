@@ -13,9 +13,11 @@ import {
 } from './mainSceneConfig.js';
 
 export class MainScene {
-  constructor({ ui }) {
+  constructor({ ui, onGameOver }) {
     this.ui = ui;
+    this.onGameOver = onGameOver;
     this.buyItemButtons = new Map();
+    this.gameOverBankLimit = -50000;
 
     this.startNewGame();
     this.bindUi();
@@ -26,6 +28,7 @@ export class MainScene {
     this.ui?.root?.classList.remove('is-title-screen');
     this.ui?.titleScreen?.classList.remove('is-open');
     this.ui?.locationScreen?.classList.remove('is-open');
+    this.ui?.gameOverScreen?.classList.remove('is-open');
   }
 
   getDefaultLocationConfig() {
@@ -135,6 +138,7 @@ export class MainScene {
     this.monthlySatisfactionHistory = [];
     this.currentCycleLockerTurnedDown = 0;
     this.monthStartBank = this.money;
+    this.isGameOver = false;
 
     this.buyMode = false;
     this.selectedItemKey = 'treadmill';
@@ -434,6 +438,8 @@ export class MainScene {
   }
 
   update(deltaSeconds, game) {
+    if (this.isGameOver) return;
+
     this.handleMapDrag(game);
     const mapLayout = this.getMapLayout(game.canvas.width, game.canvas.height);
     this.lastMapLayout = mapLayout;
@@ -442,6 +448,7 @@ export class MainScene {
     this.updateHoveredTile(game, mapLayout);
     this.handleDeviceSelectionClick(game);
     this.handlePlacementClick(game);
+    if (this.evaluateBankState()) return;
 
     this.spawnTimer += deltaSeconds;
     while (this.spawnTimer >= this.getSpawnIntervalSeconds()) {
@@ -453,12 +460,28 @@ export class MainScene {
     while (this.cycleTimer >= this.cycleIntervalSeconds) {
       this.processEconomyCycle();
       this.cycleTimer -= this.cycleIntervalSeconds;
+      if (this.isGameOver) return;
     }
 
     this.updateBrokenDevices(deltaSeconds);
     this.updatePeople(deltaSeconds, mapLayout);
     this.updatePopularity();
+    this.evaluateBankState();
     this.updateUiMetrics();
+  }
+
+  evaluateBankState() {
+    if (this.isGameOver) {
+      return true;
+    }
+
+    if (this.money <= this.gameOverBankLimit) {
+      this.isGameOver = true;
+      this.onGameOver?.({ bank: this.money, limit: this.gameOverBankLimit });
+      return true;
+    }
+
+    return false;
   }
 
   processEconomyCycle() {
@@ -494,6 +517,7 @@ export class MainScene {
     this.currentCycleLockerTurnedDown = 0;
     this.monthStartBank = this.money;
     this.advanceMonth();
+    this.evaluateBankState();
   }
 
   recordMonthlyMetricsSnapshot(monthLabel) {
