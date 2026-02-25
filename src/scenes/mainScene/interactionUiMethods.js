@@ -714,6 +714,9 @@ export const interactionUiMethods = {
       statsModal,
       statsModalTitle,
       statsModalBody,
+      memberListButton,
+      memberListModal,
+      memberListBody,
       deviceName,
       deviceBreakProb,
       deviceSellValue,
@@ -725,8 +728,15 @@ export const interactionUiMethods = {
       customerShowerPlan,
       customerTrainingList,
       customerThoughtsList,
-      customerCard
+      customerCard,
+      guideButton,
+      tutorialModal,
+      tutorialChecklistBody,
+      tutorialWelcomeModal,
+      tutorialCompleteModal
     } = this.ui;
+
+    this.updateTutorialProgress();
 
     const averageSatisfaction = this.getAverageSatisfaction();
     const projectedMembersIncome = this.members * this.subscriptionFee;
@@ -779,14 +789,27 @@ export const interactionUiMethods = {
       statsModalBody.innerHTML = '';
     }
 
+    memberListButton?.classList.toggle('is-active', this.memberListVisible);
+    memberListModal?.classList.toggle('is-open', this.memberListVisible);
+    if (memberListModal) {
+      memberListModal.setAttribute('aria-hidden', this.memberListVisible ? 'false' : 'true');
+    }
+    this.renderMemberList(memberListBody);
+
     const selected = this.items.find((item) => item.id === this.selectedDeviceId) ?? null;
     const selectedDecor = this.selectedDecor;
     const selectedDecorConfig = selectedDecor ? ITEM_CATALOG[selectedDecor.itemKey] : null;
-    deviceCard?.classList.toggle('is-hidden', !selected && !selectedDecorConfig);
+    const selectedBuyCatalogConfig =
+      !selected && !selectedDecorConfig && this.buyMode && ITEM_CATALOG[this.selectedItemKey]
+        ? ITEM_CATALOG[this.selectedItemKey]
+        : null;
+    deviceCard?.classList.toggle('is-hidden', !selected && !selectedDecorConfig && !selectedBuyCatalogConfig);
 
     if (deviceName) {
       if (!selected && !selectedDecorConfig) {
-        deviceName.textContent = 'None selected';
+        deviceName.textContent = selectedBuyCatalogConfig
+          ? `${selectedBuyCatalogConfig.label} (${selectedBuyCatalogConfig.type})`
+          : 'None selected';
       } else if (selectedDecorConfig) {
         deviceName.textContent = `${selectedDecorConfig.label} (decor)`;
       } else {
@@ -800,6 +823,8 @@ export const interactionUiMethods = {
         ? 'Break chance next use: -'
         : selected
         ? `Break chance next use: ${(selected.breakChance * 100).toFixed(1)}%`
+        : selectedBuyCatalogConfig
+        ? `Break chance next use: ${(selectedBuyCatalogConfig.initialBreakChance * 100).toFixed(1)}%`
         : 'Break chance next use: -';
     }
 
@@ -814,6 +839,25 @@ export const interactionUiMethods = {
     if (sellDeviceButton) {
       sellDeviceButton.disabled = !selected && !selectedDecorConfig;
     }
+
+    guideButton?.classList.toggle('is-active', this.tutorialVisible);
+
+    tutorialModal?.classList.toggle('is-open', this.tutorialVisible);
+    if (tutorialModal) {
+      tutorialModal.setAttribute('aria-hidden', this.tutorialVisible ? 'false' : 'true');
+    }
+
+    tutorialWelcomeModal?.classList.toggle('is-open', this.tutorialWelcomeVisible);
+    if (tutorialWelcomeModal) {
+      tutorialWelcomeModal.setAttribute('aria-hidden', this.tutorialWelcomeVisible ? 'false' : 'true');
+    }
+
+    tutorialCompleteModal?.classList.toggle('is-open', this.tutorialCompleteVisible);
+    if (tutorialCompleteModal) {
+      tutorialCompleteModal.setAttribute('aria-hidden', this.tutorialCompleteVisible ? 'false' : 'true');
+    }
+
+    this.renderTutorialChecklist(tutorialChecklistBody);
 
     this.renderSelectedCustomer(
       customerCard,
@@ -1323,8 +1367,7 @@ export const interactionUiMethods = {
 
       const meta = document.createElement('p');
       meta.className = 'member-meta';
-      const cancelChance = Math.max(0, 90 - member.lastVisitSatisfaction);
-      meta.textContent = `${member.type} • Cancel: ${cancelChance}% • ${member.monthsSubscribed} mo`;
+      meta.textContent = `Last satisfaction: ${member.lastVisitSatisfaction} • Subscribed: ${member.monthsSubscribed} mo`;
 
       info.appendChild(name);
       info.appendChild(meta);

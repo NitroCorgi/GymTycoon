@@ -52,19 +52,6 @@ export const ITEM_CATALOG = {
     initialBreakChance: 0.05,
     color: '#facc15'
   },
-  treadmillPremium: {
-    label: 'Treadmill Premium',
-    type: 'cardio',
-    shortLabel: 'TP',
-    footprintRows: 1,
-    footprintCols: 2,
-    cost: 2000,
-    monthlyCost: 0,
-    checkInSeconds: 0,
-    popularity: 4,
-    initialBreakChance: 0.01,
-    color: '#0ea5e9'
-  },
   elliptical: {
     label: 'Elliptical Trainer',
     type: 'cardio',

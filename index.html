@@ -184,6 +184,58 @@
           </article>
         </section>
 
+        <section id="member-list-modal" class="stats-modal" aria-label="Member list window" aria-hidden="true">
+          <article class="stats-modal-card member-list-modal-card">
+            <header class="stats-modal-header">
+              <h2>Member List</h2>
+              <button id="member-list-close-btn" type="button" aria-label="Close member list">✕</button>
+            </header>
+            <div id="member-list-body" class="member-list-body member-list-body--modal"></div>
+          </article>
+        </section>
+
+        <section id="tutorial-modal" class="stats-modal" aria-label="Guide checklist" aria-hidden="true">
+          <article class="stats-modal-card tutorial-modal-card">
+            <header class="stats-modal-header">
+              <h2>Guide Checklist</h2>
+              <button id="tutorial-modal-close-btn" type="button" aria-label="Close guide">✕</button>
+            </header>
+            <div id="tutorial-checklist-body" class="stats-modal-body tutorial-checklist-body"></div>
+          </article>
+        </section>
+
+        <section id="tutorial-welcome-modal" class="stats-modal" aria-label="Tutorial welcome" aria-hidden="true">
+          <article class="stats-modal-card tutorial-message-card">
+            <header class="stats-modal-header">
+              <h2>Welcome</h2>
+              <button id="tutorial-welcome-close-btn" type="button" aria-label="Close welcome">✕</button>
+            </header>
+            <p class="tutorial-message-text">
+              Welcome to Gym Tycoon! To get started, you need a check-in, lockers, and devices. The more devices
+              you have, the higher your popularity. The more popular you are, the more people come into the gym. If
+              they are satisfied with your gym, they will subscribe to a membership! Click the Guide Button on the
+              bottom left if you are stuck.
+            </p>
+          </article>
+        </section>
+
+        <section
+          id="tutorial-complete-modal"
+          class="stats-modal"
+          aria-label="Tutorial completion"
+          aria-hidden="true"
+        >
+          <article class="stats-modal-card tutorial-message-card">
+            <header class="stats-modal-header">
+              <h2>Tutorial Complete</h2>
+              <button id="tutorial-complete-close-btn" type="button" aria-label="Close completion message">✕</button>
+            </header>
+            <p class="tutorial-message-text">
+              Congratulations! You have made it to the number one gym in town! Keep playing if you like, or start over
+            </p>
+          </article>
+        </section>
+
         <section id="device-card" class="device-card is-hidden" aria-label="Selected device">
           <h3>Device</h3>
           <p id="device-name">None selected</p>
@@ -222,8 +274,15 @@
             <div id="buy-filters" class="buy-filters" aria-label="Device type filters"></div>
             <div id="buy-grid" class="buy-grid"></div>
           </div>
-          <button id="buy-mode-btn" type="button">Buy Devices</button>
+          <div class="bottom-bar-controls">
+            <button id="member-list-btn" type="button">Member List</button>
+            <button id="buy-mode-btn" type="button">Buy Devices</button>
+          </div>
           <p class="hint">Press R to rotate</p>
+        </section>
+
+        <section class="guide-dock" aria-label="Guide controls">
+          <button id="guide-btn" type="button">Guide</button>
         </section>
       </main>
     </div>

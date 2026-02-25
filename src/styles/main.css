@@ -349,7 +349,8 @@ body {
 #app.is-title-screen .topbar,
 #app.is-title-screen .bank-warning,
 #app.is-title-screen .customer-card,
-#app.is-title-screen .buy-dock {
+#app.is-title-screen .buy-dock,
+#app.is-title-screen .guide-dock {
   display: none;
 }
 
@@ -596,13 +597,24 @@ body {
 }
 
 #member-list-btn {
-  margin-top: 0.4rem;
   border: 1px solid #3a506f;
-  border-radius: 0.55rem;
+  border-radius: 0.65rem;
   background: #14243d;
   color: #dbe8fb;
-  padding: 0.35rem 0.55rem;
-  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.55rem 0.9rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+#guide-btn {
+  border: 1px solid #3a506f;
+  border-radius: 0.65rem;
+  background: #14243d;
+  color: #dbe8fb;
+  font-weight: 600;
+  padding: 0.55rem 0.9rem;
+  font-size: 0.82rem;
   cursor: pointer;
 }
 
@@ -612,6 +624,11 @@ body {
 }
 
 #member-list-btn.is-active {
+  border-color: #6ea0ff;
+  background: #1a3b67;
+}
+
+#guide-btn.is-active {
   border-color: #6ea0ff;
   background: #1a3b67;
 }
@@ -652,6 +669,10 @@ body {
   overflow-y: auto;
   display: grid;
   gap: 0.35rem;
+}
+
+.member-list-body--modal {
+  max-height: 420px;
 }
 
 .member-row {
@@ -738,6 +759,71 @@ body {
   gap: 0.45rem;
 }
 
+.guide-dock {
+  position: absolute;
+  left: 0.9rem;
+  bottom: 0.9rem;
+}
+
+.tutorial-modal-card {
+  min-height: 220px;
+}
+
+.tutorial-checklist-body {
+  display: grid;
+  gap: 0.65rem;
+  min-height: 220px;
+}
+
+.tutorial-checklist-stage {
+  border: 1px solid #2f435f;
+  border-radius: 0.65rem;
+  background: rgb(11 19 33 / 75%);
+  padding: 0.65rem;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.tutorial-checklist-stage h3 {
+  margin: 0;
+  color: #dbe8fb;
+  font-size: 0.88rem;
+}
+
+.tutorial-checklist-items {
+  display: grid;
+  gap: 0.28rem;
+}
+
+.tutorial-checklist-item {
+  margin: 0;
+  color: #bfd3ec;
+  font-size: 0.82rem;
+}
+
+.tutorial-checklist-item.is-complete {
+  color: #86efac;
+}
+
+.tutorial-message-card {
+  width: min(760px, calc(100% - 2rem));
+  min-height: 180px;
+}
+
+.tutorial-message-text {
+  margin: 0;
+  color: #dbe8fb;
+  line-height: 1.5;
+  font-size: 0.92rem;
+}
+
+.bottom-bar-controls {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.45rem;
+  align-items: center;
+}
+
 #buy-mode-btn {
   width: 100%;
   border: 1px solid #2f8f44;
@@ -753,6 +839,28 @@ body {
   background: #15803d;
   border-color: #4ade80;
   color: #f8fbff;
+}
+
+#member-list-close-btn {
+  width: 1.9rem;
+  height: 1.9rem;
+  border: 1px solid #3a506f;
+  border-radius: 0.55rem;
+  background: #14243d;
+  color: #dbe8fb;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+#member-list-close-btn:hover,
+#member-list-close-btn:focus-visible {
+  border-color: #6ea0ff;
+  background: #1a3b67;
+  outline: none;
+}
+
+.member-list-modal-card {
+  min-height: 220px;
 }
 
 .buy-panel {
@@ -934,6 +1042,10 @@ body {
 
   .buy-dock {
     width: min(100%, 420px);
+  }
+
+  .bottom-bar-controls {
+    grid-template-columns: 1fr;
   }
 
   .buy-grid {

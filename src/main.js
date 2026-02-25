@@ -40,7 +40,7 @@ sceneManager.register(
       const selectedLocation = FREE_MODE_LOCATIONS.find((location) => location.id === locationId) ?? FREE_MODE_LOCATIONS[0];
       const selectedDifficulty = FREE_MODE_DIFFICULTIES.find((difficulty) => difficulty.id === difficultyId)
         ?? FREE_MODE_DIFFICULTIES[0];
-      mainScene.startNewGame(selectedLocation, selectedDifficulty);
+      mainScene.startNewGame(selectedLocation, selectedDifficulty, true);
       sceneManager.setActive('main');
     }
   })

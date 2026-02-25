@@ -93,7 +93,8 @@ export class MainScene {
 
   startNewGame(
     locationConfig = this.getDefaultLocationConfig(),
-    difficultyConfig = this.getDefaultDifficultyConfig()
+    difficultyConfig = this.getDefaultDifficultyConfig(),
+    showTutorialWelcome = false
   ) {
     const selectedLocation = locationConfig ?? this.getDefaultLocationConfig();
     const selectedDifficulty = difficultyConfig ?? this.getDefaultDifficultyConfig();
@@ -184,6 +185,14 @@ export class MainScene {
     this.selectedPersonId = null;
     this.lastMapLayout = null;
 
+    this.tutorialVisible = false;
+    this.tutorialWelcomeVisible = Boolean(showTutorialWelcome);
+    this.tutorialCompleteVisible = false;
+    this.tutorialHasShownCompletion = false;
+    this.tutorialUnlockedStageCount = 1;
+    this.tutorialStageCompletions = [false, false, false];
+    this.tutorialRenderStateKey = '';
+
     this.buildBuyPanelButtons();
     this.recordMonthlyMetricsSnapshot(this.getCurrentMonthLabel());
     this.refreshUi();
@@ -204,7 +213,17 @@ export class MainScene {
       monthlyCostsValue,
       statsModal,
       statsModalCloseButton,
-      sellDeviceButton
+      memberListButton,
+      memberListModal,
+      memberListCloseButton,
+      sellDeviceButton,
+      guideButton,
+      tutorialModal,
+      tutorialModalCloseButton,
+      tutorialWelcomeModal,
+      tutorialWelcomeCloseButton,
+      tutorialCompleteModal,
+      tutorialCompleteCloseButton
     } = this.ui;
 
     buyModeButton?.addEventListener('click', () => {
@@ -277,6 +296,60 @@ export class MainScene {
     statsModal?.addEventListener('click', (event) => {
       if (event.target !== statsModal) return;
       this.activeStatisticKey = null;
+      this.updateUiMetrics();
+    });
+
+    memberListButton?.addEventListener('click', () => {
+      this.memberListVisible = !this.memberListVisible;
+      this.updateUiMetrics();
+    });
+
+    memberListCloseButton?.addEventListener('click', () => {
+      this.memberListVisible = false;
+      this.updateUiMetrics();
+    });
+
+    memberListModal?.addEventListener('click', (event) => {
+      if (event.target !== memberListModal) return;
+      this.memberListVisible = false;
+      this.updateUiMetrics();
+    });
+
+    guideButton?.addEventListener('click', () => {
+      this.tutorialVisible = !this.tutorialVisible;
+      this.updateUiMetrics();
+    });
+
+    tutorialModalCloseButton?.addEventListener('click', () => {
+      this.tutorialVisible = false;
+      this.updateUiMetrics();
+    });
+
+    tutorialModal?.addEventListener('click', (event) => {
+      if (event.target !== tutorialModal) return;
+      this.tutorialVisible = false;
+      this.updateUiMetrics();
+    });
+
+    tutorialWelcomeCloseButton?.addEventListener('click', () => {
+      this.tutorialWelcomeVisible = false;
+      this.updateUiMetrics();
+    });
+
+    tutorialWelcomeModal?.addEventListener('click', (event) => {
+      if (event.target !== tutorialWelcomeModal) return;
+      this.tutorialWelcomeVisible = false;
+      this.updateUiMetrics();
+    });
+
+    tutorialCompleteCloseButton?.addEventListener('click', () => {
+      this.tutorialCompleteVisible = false;
+      this.updateUiMetrics();
+    });
+
+    tutorialCompleteModal?.addEventListener('click', (event) => {
+      if (event.target !== tutorialCompleteModal) return;
+      this.tutorialCompleteVisible = false;
       this.updateUiMetrics();
     });
 
@@ -364,6 +437,162 @@ export class MainScene {
     if (type === 'weightlifting') return 'Weightlifting';
     if (type === 'decor') return 'Decor';
     return type.charAt(0).toUpperCase() + type.slice(1);
+  }
+
+  getTutorialDefinitions() {
+    const requiredDeviceTypes = [
+      ...new Set(
+        Object.values(ITEM_CATALOG)
+          .filter((item) => this.getBuyTabForType(item.type) === 'devices')
+          .map((item) => item.type)
+      )
+    ];
+
+    return [
+      {
+        title: 'Beginner Checklist',
+        items: [
+          {
+            label: 'Buy check-in counter',
+            isComplete: () => this.items.some((item) => ITEM_CATALOG[item.key].type === 'check-in')
+          },
+          {
+            label: 'Buy at least 8 lockers',
+            isComplete: () => this.getTotalLockerCapacity() >= 8
+          },
+          {
+            label: 'Buy at least 1 device of each type',
+            isComplete: () =>
+              requiredDeviceTypes.every((type) =>
+                this.items.some((item) => ITEM_CATALOG[item.key].type === type)
+              )
+          }
+        ]
+      },
+      {
+        title: 'Growth Checklist',
+        items: [
+          {
+            label: 'Raise your popularity to 3 stars by buying more devices',
+            isComplete: () => this.getTutorialPopularityStars() >= 3
+          },
+          {
+            label: 'Buy a shower',
+            isComplete: () => this.items.some((item) => ITEM_CATALOG[item.key].type === 'shower')
+          },
+          {
+            label: 'Have at least 5 members',
+            isComplete: () => this.members >= 5
+          }
+        ]
+      },
+      {
+        title: 'Final Checklist',
+        items: [
+          {
+            label: 'Achieve 5 star popularity',
+            isComplete: () => this.getTutorialPopularityStars() >= 5
+          },
+          {
+            label: 'Have at least 100 members',
+            isComplete: () => this.members >= 100
+          },
+          {
+            label: 'Have 1.000.000 in the bank',
+            isComplete: () => this.money >= 1000000
+          }
+        ]
+      }
+    ];
+  }
+
+  getTutorialPopularityStars() {
+    return Math.min(5, Math.max(1, Math.floor(this.popularity / 20) + 1));
+  }
+
+  getTutorialProgressState() {
+    const definitions = this.getTutorialDefinitions();
+    const stages = definitions.map((stage) => {
+      const items = stage.items.map((item) => ({
+        label: item.label,
+        complete: item.isComplete()
+      }));
+
+      return {
+        title: stage.title,
+        items,
+        complete: items.every((item) => item.complete)
+      };
+    });
+
+    return {
+      stages,
+      allComplete: stages.every((stage) => stage.complete)
+    };
+  }
+
+  updateTutorialProgress() {
+    const state = this.getTutorialProgressState();
+    this.tutorialStageCompletions = state.stages.map((stage) => stage.complete);
+
+    let unlockedStageCount = 1;
+    for (let index = 0; index < state.stages.length - 1; index += 1) {
+      if (state.stages[index].complete) {
+        unlockedStageCount += 1;
+      } else {
+        break;
+      }
+    }
+
+    this.tutorialUnlockedStageCount = Math.max(1, Math.min(state.stages.length, unlockedStageCount));
+
+    if (state.allComplete && !this.tutorialHasShownCompletion) {
+      this.tutorialHasShownCompletion = true;
+      this.tutorialCompleteVisible = true;
+      this.tutorialVisible = false;
+    }
+
+    return state;
+  }
+
+  renderTutorialChecklist(checklistBody) {
+    if (!checklistBody) return;
+
+    const progress = this.getTutorialProgressState();
+    const visibleStages = progress.stages.slice(0, this.tutorialUnlockedStageCount);
+    const renderKey = JSON.stringify({
+      visibleStages,
+      unlocked: this.tutorialUnlockedStageCount
+    });
+
+    if (renderKey === this.tutorialRenderStateKey) {
+      return;
+    }
+
+    this.tutorialRenderStateKey = renderKey;
+    checklistBody.innerHTML = '';
+
+    for (const stage of visibleStages) {
+      const stageBlock = document.createElement('article');
+      stageBlock.className = 'tutorial-checklist-stage';
+
+      const stageTitle = document.createElement('h3');
+      stageTitle.textContent = stage.title;
+      stageBlock.appendChild(stageTitle);
+
+      const list = document.createElement('div');
+      list.className = 'tutorial-checklist-items';
+
+      for (const item of stage.items) {
+        const row = document.createElement('p');
+        row.className = `tutorial-checklist-item${item.complete ? ' is-complete' : ''}`;
+        row.textContent = `${item.complete ? '☑' : '☐'} ${item.label}`;
+        list.appendChild(row);
+      }
+
+      stageBlock.appendChild(list);
+      checklistBody.appendChild(stageBlock);
+    }
   }
 
   getAvailableTypesForTab() {
@@ -598,7 +827,7 @@ export class MainScene {
       item.repairSecondsRemaining = Math.max(0, item.repairSecondsRemaining - deltaSeconds);
 
       if (wasBroken && item.repairSecondsRemaining === 0) {
-        item.breakChance = 0.1;
+        item.breakChance = ITEM_CATALOG[item.key]?.initialBreakChance ?? item.breakChance;
       }
     }
   }
