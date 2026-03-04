@@ -308,11 +308,55 @@ export const layoutRenderMethods = {
     this.drawMap(context, mapLayout);
     this.drawPeople(context, 'outside');
     this.drawWallOverlays(context, mapLayout);
+    this.drawGymNameProjection(context, mapLayout);
     this.drawItems(context, mapLayout);
     this.drawPlacementPreview(context, mapLayout);
     this.drawPeople(context, 'inside');
     this.drawHud(context);
     this.drawPeopleSatisfactionOverlay(context);
+  },
+
+  drawGymNameProjection(context, mapLayout) {
+    const gymName = typeof this.gymName === 'string' ? this.gymName.trim() : '';
+    if (!gymName) {
+      return;
+    }
+
+    const northEastCorner = this.getTileVertices(0, this.mapCols - 1, mapLayout).east;
+    const southEastCorner = this.getTileVertices(this.mapRows - 1, this.mapCols - 1, mapLayout).south;
+    const wallMidpoint = {
+      x: (northEastCorner.x + southEastCorner.x) / 2,
+      y: (northEastCorner.y + southEastCorner.y) / 2
+    };
+    const mapCenter = this.tileToScreen((this.mapRows - 1) / 2, (this.mapCols - 1) / 2, mapLayout);
+    const outwardVector = {
+      x: wallMidpoint.x - mapCenter.x,
+      y: wallMidpoint.y - mapCenter.y
+    };
+    const outwardLength = Math.hypot(outwardVector.x, outwardVector.y) || 1;
+    const outwardUnit = {
+      x: outwardVector.x / outwardLength,
+      y: outwardVector.y / outwardLength
+    };
+    const outwardDistance = mapLayout.tileWidth * 1.5;
+    const labelX = wallMidpoint.x + outwardUnit.x * outwardDistance;
+    const labelY = wallMidpoint.y + outwardUnit.y * outwardDistance;
+    const fontSize = Math.max(26, Math.round(mapLayout.tileWidth * 0.82));
+
+    context.save();
+    context.translate(labelX, labelY);
+    context.rotate(-Math.PI / 6);
+    context.globalAlpha = 0.5;
+    context.font = `900 ${fontSize}px Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif`;
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillStyle = '#f8fafc';
+    context.shadowColor = 'rgb(2 6 23 / 78%)';
+    context.shadowOffsetX = 0;
+    context.shadowOffsetY = Math.max(3, Math.round(fontSize * 0.1));
+    context.shadowBlur = Math.max(4, Math.round(fontSize * 0.08));
+    context.fillText(gymName.slice(0, 24), 0, 0);
+    context.restore();
   },
 
   drawMap(context, mapLayout) {
@@ -394,6 +438,7 @@ export const layoutRenderMethods = {
   drawEntranceWall(context, mapLayout) {
     const doorEdge = this.getLeftBorderEdge(this.entranceTile.row, mapLayout);
     const wallHeight = mapLayout.tileHeight * 2.9;
+    const stripeHeight = Math.max(2, mapLayout.tileHeight * 0.14);
 
     context.fillStyle = '#0f2d1a';
     context.beginPath();
@@ -403,6 +448,7 @@ export const layoutRenderMethods = {
     context.lineTo(doorEdge.a.x, doorEdge.a.y - wallHeight);
     context.closePath();
     context.fill();
+    this.drawWallTopStripe(context, doorEdge, wallHeight, stripeHeight);
 
     context.strokeStyle = '#86efac';
     context.stroke();
@@ -422,8 +468,29 @@ export const layoutRenderMethods = {
     this.drawEntranceWall(context, mapLayout);
   },
 
+  drawWallTopStripe(context, edge, wallHeight, stripeHeight) {
+    const stripeColor =
+      typeof this.gymMainColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(this.gymMainColor)
+        ? this.gymMainColor
+        : '#6ea0ff';
+    const topA = { x: edge.a.x, y: edge.a.y - wallHeight };
+    const topB = { x: edge.b.x, y: edge.b.y - wallHeight };
+    const bottomA = { x: topA.x, y: topA.y + stripeHeight };
+    const bottomB = { x: topB.x, y: topB.y + stripeHeight };
+
+    context.beginPath();
+    context.moveTo(topA.x, topA.y);
+    context.lineTo(topB.x, topB.y);
+    context.lineTo(bottomB.x, bottomB.y);
+    context.lineTo(bottomA.x, bottomA.y);
+    context.closePath();
+    context.fillStyle = stripeColor;
+    context.fill();
+  },
+
   drawSideWalls(context, mapLayout) {
     const wallHeight = mapLayout.tileHeight * 2.9;
+    const stripeHeight = Math.max(2, mapLayout.tileHeight * 0.14);
 
     for (let col = 0; col < this.mapCols; col += 1) {
       if (!this.isTileAvailable(0, col)) {
@@ -443,6 +510,7 @@ export const layoutRenderMethods = {
       const hasWallpaper = ITEM_CATALOG[wallpaperKey]?.decorTarget === 'wall';
       context.fillStyle = hasWallpaper ? '#f3f4f6' : '#111827';
       context.fill();
+      this.drawWallTopStripe(context, topEdge, wallHeight, stripeHeight);
 
       if (this.selectedDecor?.decorTarget === 'wall' && this.selectedDecor?.side === 'top' && this.selectedDecor?.col === col) {
         context.strokeStyle = '#f8fafc';
@@ -476,6 +544,7 @@ export const layoutRenderMethods = {
       const hasWallpaper = ITEM_CATALOG[wallpaperKey]?.decorTarget === 'wall';
       context.fillStyle = hasWallpaper ? '#e5e7eb' : '#0f172a';
       context.fill();
+      this.drawWallTopStripe(context, leftEdge, wallHeight, stripeHeight);
 
       if (this.selectedDecor?.decorTarget === 'wall' && this.selectedDecor?.side === 'left' && this.selectedDecor?.row === row) {
         context.strokeStyle = '#f8fafc';

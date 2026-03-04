@@ -11,6 +11,8 @@ export function getGameUi() {
     locationScreen: byId('location-screen'),
     locationOptionInputs: document.querySelectorAll('[data-location-option]'),
     difficultyOptionInputs: document.querySelectorAll('[data-difficulty-option]'),
+    locationGymNameInput: byId('location-gym-name-input'),
+    locationGymColorInput: byId('location-gym-color-input'),
     locationStartButton: byId('location-start-btn'),
     campaignButton: byId('campaign-btn'),
     freeModeButton: byId('free-mode-btn'),

@@ -96,13 +96,20 @@ export class MainScene {
   startNewGame(
     locationConfig = this.getDefaultLocationConfig(),
     difficultyConfig = this.getDefaultDifficultyConfig(),
-    showTutorialWelcome = false
+    showTutorialWelcome = false,
+    setupConfig = {}
   ) {
     const selectedLocation = locationConfig ?? this.getDefaultLocationConfig();
     const selectedDifficulty = difficultyConfig ?? this.getDefaultDifficultyConfig();
 
     this.locationId = selectedLocation.id;
     this.difficultyId = selectedDifficulty.id;
+    const configuredGymName =
+      typeof setupConfig?.gymName === 'string' ? setupConfig.gymName.trim().slice(0, 24) : '';
+    const configuredGymMainColor =
+      typeof setupConfig?.gymMainColor === 'string' ? setupConfig.gymMainColor : '';
+    this.gymName = configuredGymName || 'My Gym';
+    this.gymMainColor = /^#[0-9a-fA-F]{6}$/.test(configuredGymMainColor) ? configuredGymMainColor : '#6ea0ff';
     this.mapRows = selectedLocation.mapRows ?? 8;
     this.mapCols = selectedLocation.mapCols ?? 8;
     this.tileAvailability = this.createTileAvailabilityGrid(

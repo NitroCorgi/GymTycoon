@@ -425,6 +425,24 @@ export const VENDING_RESTOCK_COST_PER_ITEM = 2;
 
 export const FREE_MODE_LOCATIONS = [
   {
+    id: 'home-ground-floor',
+    label: "Empty Room (Home Ground Floor)",
+    mapRows: 6,
+    mapCols: 6,
+    mapAreas: [
+      {
+        startRow: 0,
+        startCol: 0,
+        rows: 6,
+        cols: 6
+      }
+    ],
+    entranceTile: { row: 2, col: 0 },
+    monthlyRent: 200,
+    monthlyEncountersBase: 5,
+    monthlyEncountersGrowth: 1
+  },
+  {
     id: 'small-rural',
     label: 'Small Property (Rural Area)',
     mapRows: 8,
@@ -487,6 +505,11 @@ export const FREE_MODE_LOCATIONS = [
 ];
 
 export const FREE_MODE_DIFFICULTIES = [
+  {
+    id: 'sanbox',
+    label: 'Sanbox',
+    startingBank: 9999999
+  },
   {
     id: 'easy',
     label: 'Easy',

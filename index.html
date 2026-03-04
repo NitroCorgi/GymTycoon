@@ -72,6 +72,22 @@
             <div class="location-selection-column" role="group" aria-label="Available locations">
               <h3>Location</h3>
               <div class="location-options">
+                <label class="location-option" for="location-home-ground-floor">
+                  <input
+                    id="location-home-ground-floor"
+                    class="location-option-check"
+                    type="checkbox"
+                    data-location-option
+                    value="home-ground-floor"
+                  />
+                  <span class="location-option-content">
+                    <span class="location-option-title">Empty room in your home's ground floor</span>
+                    <span class="location-option-meta">Map: 6x6</span>
+                    <span class="location-option-meta">Rent: 200 EUR / month</span>
+                    <span class="location-option-meta">~5 customer encounters / month (+1 per month)</span>
+                  </span>
+                </label>
+
                 <label class="location-option" for="location-small-rural">
                   <input
                     id="location-small-rural"
@@ -123,6 +139,20 @@
             <div class="location-selection-column" role="group" aria-label="Available difficulties">
               <h3>Difficulty</h3>
               <div class="location-options">
+                <label class="location-option" for="difficulty-sanbox">
+                  <input
+                    id="difficulty-sanbox"
+                    class="location-option-check"
+                    type="checkbox"
+                    data-difficulty-option
+                    value="sanbox"
+                  />
+                  <span class="location-option-content">
+                    <span class="location-option-title">Sanbox</span>
+                    <span class="location-option-meta">Starting bank: €9,999,999</span>
+                  </span>
+                </label>
+
                 <label class="location-option" for="difficulty-easy">
                   <input
                     id="difficulty-easy"
@@ -161,6 +191,36 @@
                     <span class="location-option-title">Hard</span>
                     <span class="location-option-meta">Starting bank: €30,000</span>
                   </span>
+                </label>
+              </div>
+            </div>
+
+            <div class="location-selection-column" role="group" aria-label="Gym profile settings">
+              <h3>Gym Profile</h3>
+              <div class="location-custom-fields">
+                <label class="location-field" for="location-gym-name-input">
+                  <span class="location-field-label">Your Gym Name</span>
+                  <input
+                    id="location-gym-name-input"
+                    class="location-field-input"
+                    type="text"
+                    maxlength="24"
+                    value="My Gym"
+                    placeholder="My Gym"
+                    aria-label="Your Gym Name"
+                  />
+                  <span class="location-option-meta">Max 24 characters</span>
+                </label>
+
+                <label class="location-field" for="location-gym-color-input">
+                  <span class="location-field-label">Your gym main color</span>
+                  <input
+                    id="location-gym-color-input"
+                    class="location-color-input"
+                    type="color"
+                    value="#6ea0ff"
+                    aria-label="Your gym main color"
+                  />
                 </label>
               </div>
             </div>

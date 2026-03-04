@@ -228,13 +228,15 @@ body {
 .location-selection-grid {
   width: min(920px, 100%);
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.9rem;
+  align-items: start;
 }
 
 .location-selection-column {
   display: grid;
   gap: 0.6rem;
+  align-content: start;
 }
 
 .location-selection-column h3 {
@@ -247,6 +249,7 @@ body {
   display: grid;
   gap: 0.7rem;
   width: 100%;
+  align-content: start;
 }
 
 .location-option {
@@ -296,6 +299,51 @@ body {
 .location-option-meta {
   font-size: 0.86rem;
   color: #a9bdd9;
+}
+
+.location-custom-fields {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.location-field {
+  display: grid;
+  gap: 0.45rem;
+  border: 1px solid #344760;
+  border-radius: 0.75rem;
+  background: #142034;
+  color: #dbe8fb;
+  padding: 0.8rem 0.9rem;
+}
+
+.location-field-label {
+  font-weight: 700;
+  color: #e2e8f0;
+}
+
+.location-field-input {
+  border: 1px solid #3a506f;
+  border-radius: 0.55rem;
+  background: #111b2c;
+  color: #f8fafc;
+  padding: 0.45rem 0.55rem;
+  font-size: 0.92rem;
+}
+
+.location-field-input:focus,
+.location-color-input:focus {
+  outline: none;
+  border-color: #6ea0ff;
+}
+
+.location-color-input {
+  width: 100%;
+  min-height: 2.15rem;
+  border: 1px solid #3a506f;
+  border-radius: 0.55rem;
+  background: #111b2c;
+  padding: 0.2rem;
+  cursor: pointer;
 }
 
 .location-start-btn {

@@ -36,11 +36,14 @@ sceneManager.register(
   'location',
   new LocationScene({
     ui,
-    onStartGame: ({ locationId, difficultyId }) => {
+    onStartGame: ({ locationId, difficultyId, gymName, gymMainColor }) => {
       const selectedLocation = FREE_MODE_LOCATIONS.find((location) => location.id === locationId) ?? FREE_MODE_LOCATIONS[0];
       const selectedDifficulty = FREE_MODE_DIFFICULTIES.find((difficulty) => difficulty.id === difficultyId)
         ?? FREE_MODE_DIFFICULTIES[0];
-      mainScene.startNewGame(selectedLocation, selectedDifficulty, true);
+      mainScene.startNewGame(selectedLocation, selectedDifficulty, true, {
+        gymName,
+        gymMainColor
+      });
       sceneManager.setActive('main');
     }
   })

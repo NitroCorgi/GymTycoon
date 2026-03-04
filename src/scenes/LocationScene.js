@@ -1,5 +1,5 @@
 import { drawText } from '../ui/drawText.js';
-import { FREE_MODE_LOCATIONS } from './mainSceneConfig.js';
+import { FREE_MODE_DIFFICULTIES, FREE_MODE_LOCATIONS } from './mainSceneConfig.js';
 
 export class LocationScene {
   constructor({ ui, onStartGame }) {
@@ -8,10 +8,25 @@ export class LocationScene {
 
     this.selectedLocationId = null;
     this.selectedDifficultyId = null;
+    this.selectedGymName = 'My Gym';
+    this.selectedGymMainColor = '#6ea0ff';
 
     this.handleLocationOptionChange = this.handleLocationOptionChange.bind(this);
     this.handleDifficultyOptionChange = this.handleDifficultyOptionChange.bind(this);
+    this.handleGymNameInput = this.handleGymNameInput.bind(this);
+    this.handleGymColorInput = this.handleGymColorInput.bind(this);
     this.handleStartGameClick = this.handleStartGameClick.bind(this);
+  }
+
+  sanitizeGymName(value) {
+    if (typeof value !== 'string') return 'My Gym';
+    const trimmed = value.trim().slice(0, 24);
+    return trimmed || 'My Gym';
+  }
+
+  sanitizeGymMainColor(value) {
+    if (typeof value !== 'string') return '#6ea0ff';
+    return /^#[0-9a-fA-F]{6}$/.test(value) ? value : '#6ea0ff';
   }
 
   onEnter() {
@@ -21,6 +36,8 @@ export class LocationScene {
 
     this.selectedLocationId = null;
     this.selectedDifficultyId = null;
+    this.selectedGymName = 'My Gym';
+    this.selectedGymMainColor = '#6ea0ff';
 
     for (const input of this.ui?.locationOptionInputs ?? []) {
       input.checked = false;
@@ -30,6 +47,17 @@ export class LocationScene {
     for (const input of this.ui?.difficultyOptionInputs ?? []) {
       input.checked = false;
       input.addEventListener('change', this.handleDifficultyOptionChange);
+    }
+
+    if (this.ui?.locationGymNameInput instanceof HTMLInputElement) {
+      this.ui.locationGymNameInput.value = this.selectedGymName;
+      this.ui.locationGymNameInput.maxLength = 24;
+      this.ui.locationGymNameInput.addEventListener('input', this.handleGymNameInput);
+    }
+
+    if (this.ui?.locationGymColorInput instanceof HTMLInputElement) {
+      this.ui.locationGymColorInput.value = this.selectedGymMainColor;
+      this.ui.locationGymColorInput.addEventListener('input', this.handleGymColorInput);
     }
 
     this.ui?.locationStartButton?.addEventListener('click', this.handleStartGameClick);
@@ -49,6 +77,14 @@ export class LocationScene {
       input.removeEventListener('change', this.handleDifficultyOptionChange);
     }
 
+    if (this.ui?.locationGymNameInput instanceof HTMLInputElement) {
+      this.ui.locationGymNameInput.removeEventListener('input', this.handleGymNameInput);
+    }
+
+    if (this.ui?.locationGymColorInput instanceof HTMLInputElement) {
+      this.ui.locationGymColorInput.removeEventListener('input', this.handleGymColorInput);
+    }
+
     this.ui?.locationStartButton?.removeEventListener('click', this.handleStartGameClick);
   }
 
@@ -62,7 +98,8 @@ export class LocationScene {
   updateStartButtonState() {
     const hasLocationSelection = Boolean(this.selectedLocationId);
     const hasDifficultySelection = Boolean(this.selectedDifficultyId);
-    const canStart = hasLocationSelection && hasDifficultySelection;
+    const hasGymName = Boolean(this.selectedGymName?.trim());
+    const canStart = hasLocationSelection && hasDifficultySelection && hasGymName;
 
     if (this.ui?.locationStartButton) {
       this.ui.locationStartButton.disabled = !canStart;
@@ -100,18 +137,36 @@ export class LocationScene {
     this.updateStartButtonState();
   }
 
+  handleGymNameInput(event) {
+    const input = event.currentTarget;
+    if (!(input instanceof HTMLInputElement)) return;
+    this.selectedGymName = this.sanitizeGymName(input.value);
+    input.value = this.selectedGymName;
+    this.updateStartButtonState();
+  }
+
+  handleGymColorInput(event) {
+    const input = event.currentTarget;
+    if (!(input instanceof HTMLInputElement)) return;
+    this.selectedGymMainColor = this.sanitizeGymMainColor(input.value);
+    input.value = this.selectedGymMainColor;
+  }
+
   handleStartGameClick() {
     if (!this.selectedLocationId || !this.selectedDifficultyId) return;
 
     this.onStartGame?.({
       locationId: this.selectedLocationId,
-      difficultyId: this.selectedDifficultyId
+      difficultyId: this.selectedDifficultyId,
+      gymName: this.selectedGymName,
+      gymMainColor: this.selectedGymMainColor
     });
   }
 
   getLocationSubtitle() {
     const locationCount = FREE_MODE_LOCATIONS.length;
-    return `${locationCount} locations • 3 difficulties`;
+    const difficultyCount = FREE_MODE_DIFFICULTIES.length;
+    return `${locationCount} locations • ${difficultyCount} difficulties`;
   }
 
 
