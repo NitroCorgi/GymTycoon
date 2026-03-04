@@ -519,6 +519,10 @@ body {
   font-size: 0.78rem;
 }
 
+.device-card .is-hidden {
+  display: none;
+}
+
 .customer-card h2 {
   margin: 0 0 0.45rem;
   font-size: 0.9rem;
@@ -607,6 +611,17 @@ body {
   cursor: pointer;
 }
 
+#gym-upgrades-btn {
+  border: 1px solid #c2410c;
+  border-radius: 0.65rem;
+  background: #ea580c;
+  color: #ffedd5;
+  font-weight: 600;
+  padding: 0.55rem 0.9rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
 #guide-btn {
   border: 1px solid #3a506f;
   border-radius: 0.65rem;
@@ -626,6 +641,12 @@ body {
 #member-list-btn.is-active {
   border-color: #6ea0ff;
   background: #1a3b67;
+}
+
+#gym-upgrades-btn.is-active {
+  border-color: #fb923c;
+  background: #c2410c;
+  color: #fff7ed;
 }
 
 #guide-btn.is-active {
@@ -745,6 +766,22 @@ body {
   cursor: pointer;
 }
 
+#vending-restock-btn {
+  margin-top: 0.4rem;
+  border: 1px solid #3a506f;
+  border-radius: 0.55rem;
+  background: #14243d;
+  color: #dbe8fb;
+  padding: 0.35rem 0.55rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+#vending-restock-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 #sell-device-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -819,7 +856,7 @@ body {
 
 .bottom-bar-controls {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: 1fr auto auto;
   gap: 0.45rem;
   align-items: center;
 }
@@ -841,7 +878,8 @@ body {
   color: #f8fbff;
 }
 
-#member-list-close-btn {
+#member-list-close-btn,
+#gym-upgrades-close-btn {
   width: 1.9rem;
   height: 1.9rem;
   border: 1px solid #3a506f;
@@ -853,7 +891,9 @@ body {
 }
 
 #member-list-close-btn:hover,
-#member-list-close-btn:focus-visible {
+#member-list-close-btn:focus-visible,
+#gym-upgrades-close-btn:hover,
+#gym-upgrades-close-btn:focus-visible {
   border-color: #6ea0ff;
   background: #1a3b67;
   outline: none;
@@ -861,6 +901,73 @@ body {
 
 .member-list-modal-card {
   min-height: 220px;
+}
+
+.gym-upgrades-modal-card {
+  min-height: 320px;
+}
+
+.gym-upgrades-body {
+  display: grid;
+  gap: 0.55rem;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.upgrade-row {
+  border: 1px solid #2f435f;
+  border-radius: 0.65rem;
+  background: rgb(14 24 40 / 75%);
+  padding: 0.65rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.upgrade-row-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.upgrade-row-title {
+  margin: 0;
+  color: #e2e8f0;
+  font-size: 0.88rem;
+}
+
+.upgrade-row-status {
+  font-size: 0.74rem;
+  color: #86efac;
+}
+
+.upgrade-row-text {
+  margin: 0;
+  color: #bfd3ec;
+  font-size: 0.8rem;
+}
+
+.upgrade-row-meta {
+  margin: 0;
+  color: #93a8c7;
+  font-size: 0.76rem;
+}
+
+.upgrade-row-button {
+  justify-self: start;
+  border: 1px solid #3a506f;
+  border-radius: 0.55rem;
+  background: #14243d;
+  color: #dbe8fb;
+  padding: 0.38rem 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.upgrade-row-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .buy-panel {
@@ -1025,6 +1132,10 @@ body {
 
 .is-type-shower {
   background: #1e3a8a;
+}
+
+.is-type-facility {
+  background: #374151;
 }
 
 .is-type-decor {

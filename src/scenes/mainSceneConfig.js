@@ -258,6 +258,29 @@ export const ITEM_CATALOG = {
     initialBreakChance: 0,
     color: '#166534'
   },
+  lockerRack6: {
+    label: '6x Locker Rack',
+    type: 'locker',
+    shortLabel: 'L6',
+    cost: 1200,
+    monthlyCost: 0,
+    checkInSeconds: 0,
+    lockerCapacity: 6,
+    popularity: 0,
+    initialBreakChance: 0,
+    color: '#065f46'
+  },
+  vendingMachine: {
+    label: 'Vending Machine',
+    type: 'facility',
+    shortLabel: 'VM',
+    cost: 2500,
+    monthlyCost: 0,
+    checkInSeconds: 0,
+    popularity: 0,
+    initialBreakChance: 0,
+    color: '#374151'
+  },
   shower: {
     label: 'Shower',
     type: 'shower',
@@ -293,6 +316,63 @@ export const ITEM_CATALOG = {
     initialBreakChance: 0,
     color: '#e5e7eb',
     decorTarget: 'wall'
+  }
+};
+
+export const GYM_UPGRADES = {
+  ventilation: {
+    key: 'ventilation',
+    name: 'Ventilation',
+    description: 'Provides some air circulation in the gym.',
+    effect: 'Reduces workout time by 10%',
+    purchasePrice: 10000,
+    monthlyCost: 100,
+    requires: []
+  },
+  airConditioning: {
+    key: 'airConditioning',
+    name: 'Air Conditioning',
+    description: 'Provides a pleasant temperature across all seasons.',
+    effect: 'Reduces workout time by 25%',
+    purchasePrice: 30000,
+    monthlyCost: 300,
+    requires: ['ventilation']
+  },
+  musicSystem: {
+    key: 'musicSystem',
+    name: 'Music System',
+    description: 'Plays an energetic mix of music in the studio.',
+    effect: 'Increases base happiness by 10',
+    purchasePrice: 15000,
+    monthlyCost: 75,
+    requires: []
+  },
+  dedicatedTechnician: {
+    key: 'dedicatedTechnician',
+    name: 'Dedicated Technician',
+    description: 'A dedicated technician will provide quicker service to fix broken devices.',
+    effect: 'Cuts down device repair time by 40%',
+    purchasePrice: 20000,
+    monthlyCost: 1000,
+    requires: []
+  },
+  maintenanceSpecialist: {
+    key: 'maintenanceSpecialist',
+    name: 'Maintenance Specialist',
+    description: 'Maintains devices and prevents them from breaking too quickly.',
+    effect: 'Device break chance no longer increases after use',
+    purchasePrice: 25000,
+    monthlyCost: 2000,
+    requires: []
+  },
+  receptionStaff: {
+    key: 'receptionStaff',
+    name: 'Reception Staff',
+    description: 'Provides customer service and helps keep the training area clean.',
+    effect: 'Reduces check-in time by 25% and increases base happiness by 5',
+    purchasePrice: 17000,
+    monthlyCost: 1500,
+    requires: []
   }
 };
 
@@ -339,6 +419,9 @@ export const RECEPTION_DESK_USAGE_SECONDS = 3;
 export const TURNSTILE_USAGE_SECONDS = 1;
 export const LOCKER_USAGE_SECONDS = 5;
 export const SHOWER_USAGE_SECONDS = 10;
+export const VENDING_USAGE_SECONDS = 2;
+export const VENDING_MAX_STOCK = 100;
+export const VENDING_RESTOCK_COST_PER_ITEM = 2;
 
 export const FREE_MODE_LOCATIONS = [
   {

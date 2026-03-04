@@ -12,6 +12,7 @@ export const trainingMethods = {
           item.type !== 'check-in' &&
           item.type !== 'locker' &&
           item.type !== 'shower' &&
+          item.type !== 'facility' &&
           item.type !== 'decor'
       )
       .map(([itemKey]) => itemKey);
@@ -135,6 +136,14 @@ export const trainingMethods = {
     person.destinationItemKey = null;
     person.showLeaveSatisfaction = true;
 
+    if (this.tryAssignVendingVisit(person, mapLayout, 'post-workout')) {
+      return true;
+    }
+
+    return this.routePersonAfterWorkout(person, mapLayout);
+  },
+
+  routePersonAfterWorkout(person, mapLayout) {
     if (person.plansShower) {
       if (this.assignShowerToPerson(person, mapLayout)) {
         return true;
@@ -216,7 +225,8 @@ export const trainingMethods = {
     const itemType = ITEM_CATALOG[item.key]?.type;
     const baseTrainingSeconds = getItemUsageSeconds(item.key) * 0.5;
     const isPreferredType = person.customerType?.preferredType === itemType;
-    return isPreferredType ? baseTrainingSeconds * 2 : baseTrainingSeconds;
+    const preferredDuration = isPreferredType ? baseTrainingSeconds * 2 : baseTrainingSeconds;
+    return preferredDuration * this.getWorkoutDurationMultiplier();
   },
 
   tryStartTraining(person, mapLayout) {

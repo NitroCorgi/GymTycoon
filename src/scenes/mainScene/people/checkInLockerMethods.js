@@ -60,7 +60,7 @@ export const checkInLockerMethods = {
     item.occupiedByPersonId = person.id;
     person.state = 'checking-in';
     person.queueSeconds = 0;
-    person.trainingRemaining = getItemUsageSeconds(item.key);
+    person.trainingRemaining = getItemUsageSeconds(item.key) * this.getCheckInDurationMultiplier();
     person.activityDuration = person.trainingRemaining;
 
     const anchor = this.getDeviceAnchor(item, mapLayout);
@@ -84,6 +84,10 @@ export const checkInLockerMethods = {
       : false;
     person.canSubscribe = hasPreferredDevice;
     person.unhappy = !hasPreferredDevice;
+
+    if (this.tryAssignVendingVisit(person, mapLayout, 'post-check-in')) {
+      return;
+    }
 
     const lockerAssigned = this.assignLockerToPerson(person, mapLayout);
     if (!lockerAssigned) {

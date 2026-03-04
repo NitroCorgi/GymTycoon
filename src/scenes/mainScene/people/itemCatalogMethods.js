@@ -13,10 +13,13 @@ export const itemCatalogMethods = {
     const chance = item.breakChance;
 
     item.totalUses += 1;
-    item.breakChance = Math.min(0.96, item.breakChance + 0.02);
+    if (this.shouldIncreaseDeviceBreakChance()) {
+      item.breakChance = Math.min(0.96, item.breakChance + 0.02);
+    }
 
     if (Math.random() < chance) {
-      item.repairSecondsRemaining = REPAIR_SECONDS;
+      item.repairDurationSeconds = this.getRepairDurationSeconds?.() ?? REPAIR_SECONDS;
+      item.repairSecondsRemaining = item.repairDurationSeconds;
       item.occupiedByPersonId = null;
     }
   },
@@ -30,7 +33,8 @@ export const itemCatalogMethods = {
               !this.isItemBroken(item) &&
               ITEM_CATALOG[item.key].type !== 'check-in' &&
               ITEM_CATALOG[item.key].type !== 'locker' &&
-              ITEM_CATALOG[item.key].type !== 'shower'
+              ITEM_CATALOG[item.key].type !== 'shower' &&
+              ITEM_CATALOG[item.key].type !== 'facility'
           )
           .map((item) => ITEM_CATALOG[item.key].type)
       )
@@ -52,7 +56,8 @@ export const itemCatalogMethods = {
               !this.isItemBroken(item) &&
               ITEM_CATALOG[item.key].type !== 'check-in' &&
               ITEM_CATALOG[item.key].type !== 'locker' &&
-              ITEM_CATALOG[item.key].type !== 'shower'
+              ITEM_CATALOG[item.key].type !== 'shower' &&
+              ITEM_CATALOG[item.key].type !== 'facility'
           )
           .map((item) => ITEM_CATALOG[item.key].type)
       )
@@ -149,6 +154,19 @@ export const itemCatalogMethods = {
     return freeShowers[Math.floor(Math.random() * freeShowers.length)];
   },
 
+  findFreeVendingMachine() {
+    const freeVendingMachines = this.items.filter(
+      (item) =>
+        item.key === 'vendingMachine' &&
+        !this.isItemBroken(item) &&
+        item.occupiedByPersonId === null &&
+        (item.vendingStock ?? 0) > 0
+    );
+    if (freeVendingMachines.length === 0) return null;
+
+    return freeVendingMachines[Math.floor(Math.random() * freeVendingMachines.length)];
+  },
+
   findLockerWithFreeSlot() {
     const lockerItems = this.items.filter((item) => ITEM_CATALOG[item.key].type === 'locker');
     if (lockerItems.length === 0) return null;
@@ -193,7 +211,7 @@ export const itemCatalogMethods = {
   hasMoreThanTenPercentBrokenDevices() {
     const devices = this.items.filter((item) => {
       const type = ITEM_CATALOG[item.key].type;
-      return type !== 'check-in' && type !== 'locker' && type !== 'shower';
+      return type !== 'check-in' && type !== 'locker' && type !== 'shower' && type !== 'facility';
     });
 
     if (devices.length === 0) {

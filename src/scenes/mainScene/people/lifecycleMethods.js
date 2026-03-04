@@ -19,6 +19,14 @@ export const lifecycleMethods = {
         continue;
       }
 
+      if (person.state === 'using-vending') {
+        person.trainingRemaining = Math.max(0, person.trainingRemaining - deltaSeconds);
+        if (person.trainingRemaining === 0) {
+          this.finishVendingVisit(person, mapLayout);
+        }
+        continue;
+      }
+
       if (person.state === 'changing-in' || person.state === 'changing-out') {
         person.trainingRemaining = Math.max(0, person.trainingRemaining - deltaSeconds);
         if (person.trainingRemaining === 0) {
@@ -124,6 +132,11 @@ export const lifecycleMethods = {
 
       if (person.state === 'to-shower') {
         this.tryStartShowering(person, mapLayout);
+        continue;
+      }
+
+      if (person.state === 'to-vending') {
+        this.tryStartVendingVisit(person, mapLayout);
         continue;
       }
 

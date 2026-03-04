@@ -194,6 +194,16 @@
           </article>
         </section>
 
+        <section id="gym-upgrades-modal" class="stats-modal" aria-label="Gym upgrades window" aria-hidden="true">
+          <article class="stats-modal-card gym-upgrades-modal-card">
+            <header class="stats-modal-header">
+              <h2>Gym Upgrades</h2>
+              <button id="gym-upgrades-close-btn" type="button" aria-label="Close gym upgrades">✕</button>
+            </header>
+            <div id="gym-upgrades-body" class="stats-modal-body gym-upgrades-body"></div>
+          </article>
+        </section>
+
         <section id="tutorial-modal" class="stats-modal" aria-label="Guide checklist" aria-hidden="true">
           <article class="stats-modal-card tutorial-modal-card">
             <header class="stats-modal-header">
@@ -241,6 +251,10 @@
           <p id="device-name">None selected</p>
           <p id="device-break-prob">Break chance next use: -</p>
           <p id="device-sell-value">Sell price: -</p>
+          <p id="device-vending-stock" class="is-hidden">Stock: -</p>
+          <p id="device-vending-purchases" class="is-hidden">Purchases total: -</p>
+          <p id="device-vending-revenue" class="is-hidden">Revenue total: -</p>
+          <button id="vending-restock-btn" class="is-hidden" type="button">RESTOCK</button>
           <button id="sell-device-btn" type="button" disabled>Sell Device</button>
         </section>
 
@@ -275,8 +289,9 @@
             <div id="buy-grid" class="buy-grid"></div>
           </div>
           <div class="bottom-bar-controls">
-            <button id="member-list-btn" type="button">Member List</button>
             <button id="buy-mode-btn" type="button">Buy Devices</button>
+            <button id="gym-upgrades-btn" type="button">Gym Upgrades</button>
+            <button id="member-list-btn" type="button">Member List</button>
           </div>
           <p class="hint">Press R to rotate</p>
         </section>

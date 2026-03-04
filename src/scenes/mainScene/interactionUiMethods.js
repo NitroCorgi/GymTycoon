@@ -1,4 +1,4 @@
-import { ITEM_CATALOG } from '../mainSceneConfig.js';
+import { GYM_UPGRADES, ITEM_CATALOG, VENDING_MAX_STOCK, VENDING_RESTOCK_COST_PER_ITEM } from '../mainSceneConfig.js';
 
 export const interactionUiMethods = {
   pointInPolygon(point, polygon) {
@@ -328,7 +328,11 @@ export const interactionUiMethods = {
       queue: [],
       totalUses: 0,
       breakChance: selected.initialBreakChance,
-      repairSecondsRemaining: 0
+      repairDurationSeconds: 0,
+      repairSecondsRemaining: 0,
+      vendingStock: this.selectedItemKey === 'vendingMachine' ? VENDING_MAX_STOCK : 0,
+      vendingPurchases: 0,
+      vendingRevenue: 0
     };
 
     this.nextItemId += 1;
@@ -671,6 +675,22 @@ export const interactionUiMethods = {
     this.updateUiMetrics();
   },
 
+  restockSelectedVendingMachine() {
+    const selected = this.items.find((item) => item.id === this.selectedDeviceId);
+    if (!selected || selected.key !== 'vendingMachine') return;
+
+    const currentStock = Math.max(0, Math.floor(selected.vendingStock ?? 0));
+    const missingStock = Math.max(0, VENDING_MAX_STOCK - currentStock);
+    if (missingStock === 0) return;
+
+    const restockCost = missingStock * VENDING_RESTOCK_COST_PER_ITEM;
+    if (this.money < restockCost) return;
+
+    this.money -= restockCost;
+    selected.vendingStock = VENDING_MAX_STOCK;
+    this.updateUiMetrics();
+  },
+
   getSellPrice(item) {
     if (this.isItemBroken(item)) return 0;
 
@@ -714,13 +734,20 @@ export const interactionUiMethods = {
       statsModal,
       statsModalTitle,
       statsModalBody,
+      gymUpgradesButton,
+      gymUpgradesModal,
+      gymUpgradesBody,
       memberListButton,
       memberListModal,
       memberListBody,
       deviceName,
       deviceBreakProb,
       deviceSellValue,
+      deviceVendingStock,
+      deviceVendingPurchases,
+      deviceVendingRevenue,
       sellDeviceButton,
+      vendingRestockButton,
       deviceCard,
       customerName,
       customerMember,
@@ -796,6 +823,13 @@ export const interactionUiMethods = {
     }
     this.renderMemberList(memberListBody);
 
+    gymUpgradesButton?.classList.toggle('is-active', this.gymUpgradesVisible);
+    gymUpgradesModal?.classList.toggle('is-open', this.gymUpgradesVisible);
+    if (gymUpgradesModal) {
+      gymUpgradesModal.setAttribute('aria-hidden', this.gymUpgradesVisible ? 'false' : 'true');
+    }
+    this.renderGymUpgrades(gymUpgradesBody);
+
     const selected = this.items.find((item) => item.id === this.selectedDeviceId) ?? null;
     const selectedDecor = this.selectedDecor;
     const selectedDecorConfig = selectedDecor ? ITEM_CATALOG[selectedDecor.itemKey] : null;
@@ -834,6 +868,34 @@ export const interactionUiMethods = {
         : selected
         ? `Sell price: $${this.getSellPrice(selected)}`
         : 'Sell price: -';
+    }
+
+    const selectedIsVendingMachine = selected?.key === 'vendingMachine';
+    const vendingStock = Math.max(0, Math.floor(selected?.vendingStock ?? 0));
+    const vendingPurchases = Math.max(0, Math.floor(selected?.vendingPurchases ?? 0));
+    const vendingRevenue = Math.max(0, Math.floor(selected?.vendingRevenue ?? 0));
+    const vendingRestockCost = Math.max(0, (VENDING_MAX_STOCK - vendingStock) * VENDING_RESTOCK_COST_PER_ITEM);
+
+    if (deviceVendingStock) {
+      deviceVendingStock.classList.toggle('is-hidden', !selectedIsVendingMachine);
+      deviceVendingStock.textContent = `Stock: ${vendingStock}/${VENDING_MAX_STOCK}`;
+    }
+
+    if (deviceVendingPurchases) {
+      deviceVendingPurchases.classList.toggle('is-hidden', !selectedIsVendingMachine);
+      deviceVendingPurchases.textContent = `Purchases total: ${vendingPurchases}`;
+    }
+
+    if (deviceVendingRevenue) {
+      deviceVendingRevenue.classList.toggle('is-hidden', !selectedIsVendingMachine);
+      deviceVendingRevenue.textContent = `Revenue total: ${this.formatEuro(vendingRevenue)}`;
+    }
+
+    if (vendingRestockButton) {
+      vendingRestockButton.classList.toggle('is-hidden', !selectedIsVendingMachine);
+      vendingRestockButton.disabled =
+        !selectedIsVendingMachine || vendingStock >= VENDING_MAX_STOCK || this.money < vendingRestockCost;
+      vendingRestockButton.textContent = `RESTOCK (${this.formatEuro(vendingRestockCost)})`;
     }
 
     if (sellDeviceButton) {
@@ -913,9 +975,11 @@ export const interactionUiMethods = {
 
     if (statKey === 'monthly-costs') {
       const itemMonthlyCosts = this.items.reduce((sum, item) => sum + (ITEM_CATALOG[item.key].monthlyCost ?? 0), 0);
+      const upgradeMonthlyCosts = this.getPurchasedGymUpgradeMonthlyCost();
       this.renderPieChart(bodyElement, [
         { label: 'Rent', value: this.rentAmount, color: '#6ea0ff' },
-        { label: 'Devices/Facilities', value: itemMonthlyCosts, color: '#34d399' }
+        { label: 'Devices/Facilities', value: itemMonthlyCosts, color: '#34d399' },
+        { label: 'Upgrades', value: upgradeMonthlyCosts, color: '#f97316' }
       ]);
       return;
     }
@@ -979,7 +1043,9 @@ export const interactionUiMethods = {
         (value) => `${Math.round(value)}%`,
         {
           yAxisLabel: '%',
-          yTickFormatter: (value) => `${Math.round(value)}%`
+          yTickFormatter: (value) => `${Math.round(value)}%`,
+          minValue: 0,
+          maxValue: 100
         }
       );
     }
@@ -998,7 +1064,28 @@ export const interactionUiMethods = {
     return element;
   },
 
-  getChartDomain(values) {
+  getChartDomain(values, options = {}) {
+    const hasFixedMin = Number.isFinite(options.minValue);
+    const hasFixedMax = Number.isFinite(options.maxValue);
+
+    if (hasFixedMin || hasFixedMax) {
+      const fallbackValues = values
+        .map((value) => Number(value))
+        .filter((value) => Number.isFinite(value));
+      const fallbackMin = fallbackValues.length > 0 ? Math.min(...fallbackValues) : 0;
+      const fallbackMax = fallbackValues.length > 0 ? Math.max(...fallbackValues) : 1;
+
+      const minValue = hasFixedMin ? Number(options.minValue) : fallbackMin;
+      let maxValue = hasFixedMax ? Number(options.maxValue) : fallbackMax;
+
+      if (minValue === maxValue) {
+        maxValue = minValue + 1;
+      }
+
+      const range = maxValue - minValue;
+      return { minValue, maxValue, range };
+    }
+
     const numericValues = values
       .map((value) => Number(value))
       .filter((value) => Number.isFinite(value));
@@ -1062,7 +1149,7 @@ export const interactionUiMethods = {
     const width = 512;
     const height = 168;
     const values = safeEntries.map((entry) => Number(valueAccessor(entry) || 0));
-    const { minValue, maxValue, range } = this.getChartDomain(values);
+    const { minValue, maxValue, range } = this.getChartDomain(values, options);
     const toChartY = (value) => top + height - ((value - minValue) / range) * height;
     const axisXPosition = toChartY(0);
 
@@ -1184,7 +1271,7 @@ export const interactionUiMethods = {
     const width = 512;
     const height = 168;
     const values = safeEntries.map((entry) => Number(valueAccessor(entry) || 0));
-    const { minValue, maxValue, range } = this.getChartDomain(values);
+    const { minValue, maxValue, range } = this.getChartDomain(values, options);
     const toChartY = (value) => top + height - ((value - minValue) / range) * height;
     const baselineY = toChartY(0);
     const slotWidth = width / safeEntries.length;
@@ -1374,6 +1461,104 @@ export const interactionUiMethods = {
       row.appendChild(icon);
       row.appendChild(info);
       memberListBody.appendChild(row);
+    }
+  },
+
+  renderGymUpgrades(gymUpgradesBody) {
+    if (!gymUpgradesBody) return;
+
+    const renderState = Object.entries(GYM_UPGRADES).map(([upgradeKey]) => {
+      const purchaseState = this.getGymUpgradePurchaseState(upgradeKey);
+      return {
+        upgradeKey,
+        purchased: purchaseState.purchased,
+        hasEnoughMoney: purchaseState.hasEnoughMoney,
+        unmetRequirements: purchaseState.unmetRequirements
+      };
+    });
+    const renderKey = JSON.stringify(renderState);
+
+    if (renderKey === this.gymUpgradesRenderStateKey) {
+      return;
+    }
+
+    this.gymUpgradesRenderStateKey = renderKey;
+
+    gymUpgradesBody.innerHTML = '';
+
+    for (const [upgradeKey, upgrade] of Object.entries(GYM_UPGRADES)) {
+      const purchaseState = this.getGymUpgradePurchaseState(upgradeKey);
+
+      const row = document.createElement('article');
+      row.className = 'upgrade-row';
+
+      const header = document.createElement('div');
+      header.className = 'upgrade-row-header';
+
+      const title = document.createElement('h3');
+      title.className = 'upgrade-row-title';
+      title.textContent = upgrade.name;
+
+      const status = document.createElement('span');
+      status.className = 'upgrade-row-status';
+      status.textContent = purchaseState.purchased ? 'Purchased' : '';
+
+      header.appendChild(title);
+      header.appendChild(status);
+
+      const description = document.createElement('p');
+      description.className = 'upgrade-row-text';
+      description.textContent = upgrade.description;
+
+      const effect = document.createElement('p');
+      effect.className = 'upgrade-row-text';
+      effect.textContent = `Effect: ${upgrade.effect}`;
+
+      const meta = document.createElement('p');
+      meta.className = 'upgrade-row-meta';
+      meta.textContent = `Price: ${this.formatEuro(upgrade.purchasePrice)} • Monthly: ${this.formatEuro(
+        upgrade.monthlyCost
+      )}`;
+
+      const requirements = document.createElement('p');
+      requirements.className = 'upgrade-row-meta';
+      if ((upgrade.requires ?? []).length === 0) {
+        requirements.textContent = 'Requirements: none';
+      } else {
+        const requirementNames = (upgrade.requires ?? []).map((requiredUpgradeKey) => {
+          return GYM_UPGRADES[requiredUpgradeKey]?.name ?? requiredUpgradeKey;
+        });
+        requirements.textContent = `Requirements: ${requirementNames.join(', ')}`;
+      }
+
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'upgrade-row-button';
+      button.dataset.upgradeKey = upgradeKey;
+
+      if (purchaseState.purchased) {
+        button.disabled = true;
+        button.textContent = 'Purchased';
+      } else if (purchaseState.unmetRequirements.length > 0) {
+        button.disabled = true;
+        const unmetNames = purchaseState.unmetRequirements.map((requiredUpgradeKey) => {
+          return GYM_UPGRADES[requiredUpgradeKey]?.name ?? requiredUpgradeKey;
+        });
+        button.textContent = `Requires ${unmetNames.join(', ')}`;
+      } else if (!purchaseState.hasEnoughMoney) {
+        button.disabled = true;
+        button.textContent = 'Not enough money';
+      } else {
+        button.textContent = 'Purchase';
+      }
+
+      row.appendChild(header);
+      row.appendChild(description);
+      row.appendChild(effect);
+      row.appendChild(meta);
+      row.appendChild(requirements);
+      row.appendChild(button);
+      gymUpgradesBody.appendChild(row);
     }
   }
 };

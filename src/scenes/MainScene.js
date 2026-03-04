@@ -6,8 +6,10 @@ import {
   FREE_MODE_DIFFICULTIES,
   FIRST_NAMES,
   FREE_MODE_LOCATIONS,
+  GYM_UPGRADES,
   ITEM_CATALOG,
   LAST_NAMES,
+  REPAIR_SECONDS,
   SATISFACTION_MAX,
   SATISFACTION_MIN
 } from './mainSceneConfig.js';
@@ -162,6 +164,11 @@ export class MainScene {
     this.people = [];
     this.nextPersonId = 1;
     this.spawnTimer = 0;
+    this.monthlyNonMemberEncounterTarget = 0;
+    this.monthlyNonMemberEncountersSpawned = 0;
+    this.monthlyMemberSpawnQueue = [];
+    this.monthlyTotalSpawnTarget = 0;
+    this.monthlyTotalSpawned = 0;
 
     this.hoveredTile = null;
     this.hoveredWallSegment = null;
@@ -179,11 +186,13 @@ export class MainScene {
 
     this.debugVisible = false;
     this.memberListVisible = false;
+    this.gymUpgradesVisible = false;
     this.activeStatisticKey = null;
     this.selectedDeviceId = null;
     this.selectedDecor = null;
     this.selectedPersonId = null;
     this.lastMapLayout = null;
+    this.purchasedGymUpgrades = new Set();
 
     this.tutorialVisible = false;
     this.tutorialWelcomeVisible = Boolean(showTutorialWelcome);
@@ -192,6 +201,9 @@ export class MainScene {
     this.tutorialUnlockedStageCount = 1;
     this.tutorialStageCompletions = [false, false, false];
     this.tutorialRenderStateKey = '';
+    this.gymUpgradesRenderStateKey = '';
+
+    this.initializeMonthlySpawnPlan();
 
     this.buildBuyPanelButtons();
     this.recordMonthlyMetricsSnapshot(this.getCurrentMonthLabel());
@@ -213,10 +225,15 @@ export class MainScene {
       monthlyCostsValue,
       statsModal,
       statsModalCloseButton,
+      gymUpgradesButton,
+      gymUpgradesModal,
+      gymUpgradesCloseButton,
+      gymUpgradesBody,
       memberListButton,
       memberListModal,
       memberListCloseButton,
       sellDeviceButton,
+      vendingRestockButton,
       guideButton,
       tutorialModal,
       tutorialModalCloseButton,
@@ -304,6 +321,31 @@ export class MainScene {
       this.updateUiMetrics();
     });
 
+    gymUpgradesButton?.addEventListener('click', () => {
+      this.gymUpgradesVisible = !this.gymUpgradesVisible;
+      this.updateUiMetrics();
+    });
+
+    gymUpgradesCloseButton?.addEventListener('click', () => {
+      this.gymUpgradesVisible = false;
+      this.updateUiMetrics();
+    });
+
+    gymUpgradesModal?.addEventListener('click', (event) => {
+      if (event.target !== gymUpgradesModal) return;
+      this.gymUpgradesVisible = false;
+      this.updateUiMetrics();
+    });
+
+    gymUpgradesBody?.addEventListener('click', (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLButtonElement)) return;
+
+      const upgradeKey = target.dataset.upgradeKey;
+      if (!upgradeKey) return;
+      this.purchaseGymUpgrade(upgradeKey);
+    });
+
     memberListCloseButton?.addEventListener('click', () => {
       this.memberListVisible = false;
       this.updateUiMetrics();
@@ -355,6 +397,10 @@ export class MainScene {
 
     sellDeviceButton?.addEventListener('click', () => {
       this.sellSelectedDevice();
+    });
+
+    vendingRestockButton?.addEventListener('click', () => {
+      this.restockSelectedVendingMachine();
     });
 
     subscriptionInput?.addEventListener('input', (event) => {
@@ -423,7 +469,9 @@ export class MainScene {
 
   getBuyTabForType(type) {
     if (type === 'decor') return 'decor';
-    return type === 'check-in' || type === 'locker' || type === 'shower' ? 'facilities' : 'devices';
+    return type === 'check-in' || type === 'locker' || type === 'shower' || type === 'facility'
+      ? 'facilities'
+      : 'devices';
   }
 
   getTypeColorClass(type) {
@@ -437,6 +485,102 @@ export class MainScene {
     if (type === 'weightlifting') return 'Weightlifting';
     if (type === 'decor') return 'Decor';
     return type.charAt(0).toUpperCase() + type.slice(1);
+  }
+
+  getGymUpgradeEntries() {
+    return Object.entries(GYM_UPGRADES);
+  }
+
+  isGymUpgradePurchased(upgradeKey) {
+    return this.purchasedGymUpgrades.has(upgradeKey);
+  }
+
+  getPurchasedGymUpgradeMonthlyCost() {
+    return this.getGymUpgradeEntries().reduce((sum, [upgradeKey, upgrade]) => {
+      if (!this.isGymUpgradePurchased(upgradeKey)) {
+        return sum;
+      }
+      return sum + (upgrade.monthlyCost ?? 0);
+    }, 0);
+  }
+
+  getWorkoutDurationMultiplier() {
+    let multiplier = 1;
+    if (this.isGymUpgradePurchased('ventilation')) {
+      multiplier *= 0.9;
+    }
+    if (this.isGymUpgradePurchased('airConditioning')) {
+      multiplier *= 0.75;
+    }
+    return multiplier;
+  }
+
+  getCheckInDurationMultiplier() {
+    return this.isGymUpgradePurchased('receptionStaff') ? 0.75 : 1;
+  }
+
+  getBaseHappinessBonus() {
+    let bonus = 0;
+    if (this.isGymUpgradePurchased('musicSystem')) {
+      bonus += 10;
+    }
+    if (this.isGymUpgradePurchased('receptionStaff')) {
+      bonus += 5;
+    }
+    return bonus;
+  }
+
+  getRepairDurationSeconds() {
+    const multiplier = this.isGymUpgradePurchased('dedicatedTechnician') ? 0.6 : 1;
+    return Math.max(1, Math.round(REPAIR_SECONDS * multiplier));
+  }
+
+  shouldIncreaseDeviceBreakChance() {
+    return !this.isGymUpgradePurchased('maintenanceSpecialist');
+  }
+
+  getGymUpgradePurchaseState(upgradeKey) {
+    const upgrade = GYM_UPGRADES[upgradeKey];
+    if (!upgrade) {
+      return {
+        exists: false,
+        canPurchase: false,
+        purchased: false,
+        unmetRequirements: ['Unknown upgrade']
+      };
+    }
+
+    const purchased = this.isGymUpgradePurchased(upgradeKey);
+    const unmetRequirements = (upgrade.requires ?? []).filter((requiredUpgradeKey) => {
+      return !this.isGymUpgradePurchased(requiredUpgradeKey);
+    });
+    const hasEnoughMoney = this.money >= upgrade.purchasePrice;
+    const canPurchase = !purchased && unmetRequirements.length === 0 && hasEnoughMoney;
+
+    return {
+      exists: true,
+      canPurchase,
+      purchased,
+      hasEnoughMoney,
+      unmetRequirements
+    };
+  }
+
+  purchaseGymUpgrade(upgradeKey) {
+    const upgrade = GYM_UPGRADES[upgradeKey];
+    if (!upgrade) {
+      return false;
+    }
+
+    const purchaseState = this.getGymUpgradePurchaseState(upgradeKey);
+    if (!purchaseState.canPurchase) {
+      return false;
+    }
+
+    this.money -= upgrade.purchasePrice;
+    this.purchasedGymUpgrades.add(upgradeKey);
+    this.updateUiMetrics();
+    return true;
   }
 
   getTutorialDefinitions() {
@@ -725,8 +869,6 @@ export class MainScene {
     this.lastCycleGained = this.currentCycleGained;
     this.currentCycleGained = 0;
     this.currentCycleChurn = 0;
-    this.monthSatisfactionSum = 0;
-    this.monthSatisfactionCount = 0;
 
     const monthLabel = this.getCurrentMonthLabel();
     const monthlyCosts = this.getMonthlyCosts();
@@ -743,6 +885,8 @@ export class MainScene {
       profit: monthlyProfit
     });
     this.recordMonthlyMetricsSnapshot(monthLabel);
+    this.monthSatisfactionSum = 0;
+    this.monthSatisfactionCount = 0;
     this.currentCycleLockerTurnedDown = 0;
     this.monthStartBank = this.money;
     this.advanceMonth();
@@ -797,19 +941,68 @@ export class MainScene {
   advanceMonth() {
     this.elapsedMonths += 1;
     this.currentMonth += 1;
-    if (this.currentMonth <= 12) return;
+    if (this.currentMonth > 12) {
+      this.currentMonth = 1;
+      this.currentYear = (this.currentYear + 1) % 100;
+    }
 
-    this.currentMonth = 1;
-    this.currentYear = (this.currentYear + 1) % 100;
+    this.initializeMonthlySpawnPlan();
   }
 
   getSpawnIntervalSeconds() {
-    const targetMonthlyEncounters = Math.max(
+    const remainingSpawns = this.monthlyTotalSpawnTarget - this.monthlyTotalSpawned;
+    if (remainingSpawns <= 0) {
+      return Number.POSITIVE_INFINITY;
+    }
+
+    return Math.max(0.35, this.cycleIntervalSeconds / this.monthlyTotalSpawnTarget);
+  }
+
+  getMonthlyNonMemberEncounterTarget() {
+    return Math.max(
       1,
       this.monthlyEncountersBase + this.monthlyEncountersGrowth * this.elapsedMonths
     );
+  }
 
-    return Math.max(0.35, this.cycleIntervalSeconds / targetMonthlyEncounters);
+  initializeMonthlySpawnPlan() {
+    const nonMemberTarget = this.getMonthlyNonMemberEncounterTarget();
+    const memberTarget = Math.floor(this.memberProfiles.length / 2);
+    const shuffledMembers = [...this.memberProfiles].sort(() => Math.random() - 0.5);
+
+    this.monthlyNonMemberEncounterTarget = nonMemberTarget;
+    this.monthlyNonMemberEncountersSpawned = 0;
+    this.monthlyMemberSpawnQueue = shuffledMembers.slice(0, memberTarget);
+    this.monthlyTotalSpawnTarget = nonMemberTarget + this.monthlyMemberSpawnQueue.length;
+    this.monthlyTotalSpawned = 0;
+    this.spawnTimer = 0;
+  }
+
+  chooseIncomingVisitorProfile() {
+    const remainingNonMember =
+      this.monthlyNonMemberEncounterTarget - this.monthlyNonMemberEncountersSpawned;
+    const remainingMembers = this.monthlyMemberSpawnQueue.length;
+
+    if (remainingNonMember <= 0 && remainingMembers <= 0) {
+      return null;
+    }
+
+    const shouldSpawnMember =
+      remainingMembers > 0 &&
+      (remainingNonMember <= 0 || Math.random() < remainingMembers / (remainingMembers + remainingNonMember));
+
+    if (shouldSpawnMember) {
+      return {
+        memberProfile: this.monthlyMemberSpawnQueue.pop(),
+        isMember: true
+      };
+    }
+
+    this.monthlyNonMemberEncountersSpawned += 1;
+    return {
+      memberProfile: null,
+      isMember: false
+    };
   }
 
   updatePopularity() {
@@ -828,11 +1021,17 @@ export class MainScene {
 
       if (wasBroken && item.repairSecondsRemaining === 0) {
         item.breakChance = ITEM_CATALOG[item.key]?.initialBreakChance ?? item.breakChance;
+        item.repairDurationSeconds = 0;
       }
     }
   }
 
   spawnIncomingPerson(mapLayout) {
+    const incomingVisitor = this.chooseIncomingVisitorProfile();
+    if (!incomingVisitor) {
+      return false;
+    }
+
     const nearSidewalkOutsideDistance = this.getNearSidewalkOutsideDistance() ?? 1;
     const { startRow, endRow } = this.getExteriorTraversalRowBounds();
     const entersFromTop = Math.random() < 0.5;
@@ -848,12 +1047,8 @@ export class MainScene {
       nearSidewalkOutsideDistance,
       mapLayout
     );
-
-    const visitingMember =
-      this.memberProfiles.length > 0 && Math.random() < this.getReturningMemberVisitChance()
-        ? this.memberProfiles[Math.floor(Math.random() * this.memberProfiles.length)]
-        : null;
-    const isMember = visitingMember !== null;
+    const visitingMember = incomingVisitor.memberProfile;
+    const isMember = incomingVisitor.isMember;
 
     this.people.push({
       id: this.nextPersonId,
@@ -898,10 +1093,13 @@ export class MainScene {
       thoughtBrokenDevices: false,
       thoughtPriceTooHigh: false,
       thoughtPriceGreatDeal: false,
-      showLeaveSatisfaction: false
+      showLeaveSatisfaction: false,
+      vendingVisitStage: null
     });
 
     this.nextPersonId += 1;
+    this.monthlyTotalSpawned += 1;
+    return true;
   }
 
   randomIntInclusive(min, max) {
@@ -937,8 +1135,10 @@ export class MainScene {
       baseline = this.randomIntInclusive(40, 60);
     }
 
-    person.baselineSatisfaction = baseline;
-    this.setSatisfaction(person, baseline);
+    baseline += this.getBaseHappinessBonus();
+
+    person.baselineSatisfaction = this.clampSatisfaction(baseline);
+    this.setSatisfaction(person, person.baselineSatisfaction);
   }
 
   registerVisitSatisfaction(person) {

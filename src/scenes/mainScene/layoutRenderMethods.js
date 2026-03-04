@@ -151,7 +151,8 @@ export const layoutRenderMethods = {
 
   getMonthlyCosts() {
     const itemMonthlyCosts = this.items.reduce((sum, item) => sum + (ITEM_CATALOG[item.key].monthlyCost ?? 0), 0);
-    return this.rentAmount + itemMonthlyCosts;
+    const upgradeMonthlyCosts = this.getPurchasedGymUpgradeMonthlyCost?.() ?? 0;
+    return this.rentAmount + itemMonthlyCosts + upgradeMonthlyCosts;
   },
 
   getEntrancePoints(mapLayout) {
@@ -764,7 +765,8 @@ export const layoutRenderMethods = {
     }
 
     if (drawProgress && isBroken) {
-      const repairProgress = Math.min(1, Math.max(0, 1 - item.repairSecondsRemaining / REPAIR_SECONDS));
+      const totalRepairSeconds = item.repairDurationSeconds ?? REPAIR_SECONDS;
+      const repairProgress = Math.min(1, Math.max(0, 1 - item.repairSecondsRemaining / totalRepairSeconds));
       const barWidth = mapLayout.tileWidth * 0.34;
       const barX = center.x - barWidth / 2;
       const barY = center.y + mapLayout.tileHeight * 0.73;
