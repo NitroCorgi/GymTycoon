@@ -152,7 +152,8 @@ export const layoutRenderMethods = {
   getMonthlyCosts() {
     const itemMonthlyCosts = this.items.reduce((sum, item) => sum + (ITEM_CATALOG[item.key].monthlyCost ?? 0), 0);
     const upgradeMonthlyCosts = this.getPurchasedGymUpgradeMonthlyCost?.() ?? 0;
-    return this.rentAmount + itemMonthlyCosts + upgradeMonthlyCosts;
+    const staffMonthlyCosts = (this.getStaffCostPerHour?.() ?? 0) * 24 * 7;
+    return this.rentAmount + itemMonthlyCosts + upgradeMonthlyCosts + staffMonthlyCosts;
   },
 
   getEntrancePoints(mapLayout) {
@@ -977,9 +978,13 @@ export const layoutRenderMethods = {
 
   drawCycleProgressBar(context, x, y) {
     const barWidth = 140;
-    const barHeight = 12;
-    const progress = Math.min(1, this.cycleTimer / this.cycleIntervalSeconds);
-    const monthLabel = `${String(this.currentMonth).padStart(2, '0')}/${String(this.currentYear).padStart(2, '0')}`;
+    const barHeight = 16;
+    const timeUiState = this.getTimeBarUiState?.();
+    const progress = Math.max(0, Math.min(1, timeUiState?.dayProgressNormalized ?? 0));
+    const calendarLabel = timeUiState?.summaryLabel ?? 'Day 1/7 • Mon, 01 / 26';
+    const timeLabel = `${timeUiState?.timeLabel ?? '00:00'} • ${timeUiState?.isOpen ? 'Open' : 'Closed'}`;
+    const weatherLabel = timeUiState?.weatherEmoji ?? '☁️';
+    const centerX = x + barWidth / 2;
 
     context.fillStyle = '#0f172a';
     context.fillRect(x, y, barWidth, barHeight);
@@ -987,10 +992,34 @@ export const layoutRenderMethods = {
     context.strokeStyle = '#334155';
     context.strokeRect(x, y, barWidth, barHeight);
 
-    context.strokeStyle = '#22d3ee';
-    context.fillStyle = '#22d3ee';
+    const activeGradient = context.createLinearGradient(x + 1, y, x + barWidth - 1, y);
+    const darkBlue = '#1e1c75';
+    const orange = '#f59e0b';
+    const lightBlue = '#bfe9ff';
+
+    activeGradient.addColorStop(0.0, darkBlue);
+    activeGradient.addColorStop(0.15, darkBlue);
+    activeGradient.addColorStop(0.25, orange);
+    activeGradient.addColorStop(0.25, orange);
+    activeGradient.addColorStop(0.35, lightBlue);
+    activeGradient.addColorStop(0.65, lightBlue);
+    activeGradient.addColorStop(0.75, orange);
+    activeGradient.addColorStop(0.75, orange);
+    activeGradient.addColorStop(0.85, darkBlue);
+    activeGradient.addColorStop(1.0, darkBlue);
+
+    context.fillStyle = activeGradient;
     context.fillRect(x + 1, y + 1, (barWidth - 2) * progress, barHeight - 2);
 
-    drawText(context, monthLabel, x + 46, y - 6, '#cbd5e1');
+    context.save();
+    context.fillStyle = '#cbd5e1';
+    context.font = '16px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+    context.textAlign = 'center';
+    context.textBaseline = 'bottom';
+    context.fillText(calendarLabel, centerX, y - 6);
+    context.textBaseline = 'top';
+    context.fillText(timeLabel, centerX, y + barHeight + 6);
+    context.fillText(weatherLabel, centerX, y + barHeight + 24);
+    context.restore();
   }
 };

@@ -46,13 +46,19 @@
         </div>
         <label class="metric fee-metric" for="subscription-input">
           <span>Membership Fee</span>
-          <input
-            id="subscription-input"
-            type="text"
-            inputmode="numeric"
-            value="€30"
-            aria-label="Membership fee"
-          />
+          <div class="fee-slider">
+            <input
+              id="subscription-input"
+              class="fee-slider-input"
+              type="range"
+              min="0"
+              max="150"
+              step="1"
+              value="30"
+              aria-label="Membership fee"
+            />
+          </div>
+          <strong id="subscription-value">€30</strong>
         </label>
       </header>
       <p id="bank-warning-message" class="bank-warning" role="status" aria-live="polite"></p>
@@ -264,6 +270,27 @@
           </article>
         </section>
 
+        <section
+          id="gym-administration-modal"
+          class="stats-modal"
+          aria-label="Gym administration window"
+          aria-hidden="true"
+        >
+          <article class="stats-modal-card gym-administration-modal-card">
+            <header class="stats-modal-header">
+              <h2>Gym Administration</h2>
+              <button
+                id="gym-administration-close-btn"
+                type="button"
+                aria-label="Close gym administration"
+              >
+                ✕
+              </button>
+            </header>
+            <div id="gym-administration-body" class="stats-modal-body gym-administration-body"></div>
+          </article>
+        </section>
+
         <section id="tutorial-modal" class="stats-modal" aria-label="Guide checklist" aria-hidden="true">
           <article class="stats-modal-card tutorial-modal-card">
             <header class="stats-modal-header">
@@ -352,6 +379,7 @@
             <button id="buy-mode-btn" type="button">Buy Devices</button>
             <button id="gym-upgrades-btn" type="button">Gym Upgrades</button>
             <button id="member-list-btn" type="button">Member List</button>
+            <button id="gym-administration-btn" type="button">Gym Administration</button>
           </div>
           <p class="hint">Press R to rotate</p>
         </section>

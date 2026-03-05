@@ -1,4 +1,5 @@
 import { GYM_UPGRADES, ITEM_CATALOG, VENDING_MAX_STOCK, VENDING_RESTOCK_COST_PER_ITEM } from '../mainSceneConfig.js';
+import { WEEKDAY_NAMES } from '../../systems/simulation/config.js';
 
 export const interactionUiMethods = {
   pointInPolygon(point, polygon) {
@@ -729,6 +730,7 @@ export const interactionUiMethods = {
       satisfactionValue,
       metricStatButtons,
       subscriptionInput,
+      subscriptionValue,
       membersGainedValue,
       membersLostValue,
       statsModal,
@@ -737,6 +739,9 @@ export const interactionUiMethods = {
       gymUpgradesButton,
       gymUpgradesModal,
       gymUpgradesBody,
+      gymAdministrationButton,
+      gymAdministrationModal,
+      gymAdministrationBody,
       memberListButton,
       memberListModal,
       memberListBody,
@@ -782,6 +787,7 @@ export const interactionUiMethods = {
         Math.abs(gameOverLimit)
       )}.`;
     }
+
     if (popularityValue) popularityValue.textContent = this.getPopularityStars();
     if (monthlyCostsValue) monthlyCostsValue.textContent = this.formatEuro(this.getMonthlyCosts());
     if (projectedIncomeValue) {
@@ -796,8 +802,15 @@ export const interactionUiMethods = {
     if (satisfactionValue) {
       satisfactionValue.textContent = `${this.getSatisfactionEmoji(averageSatisfaction)} ${averageSatisfaction}`;
     }
-    if (subscriptionInput && document.activeElement !== subscriptionInput) {
-      subscriptionInput.value = this.formatEuro(this.subscriptionFee);
+    if (subscriptionInput) {
+      const clampedFee = Math.max(0, Math.min(150, Math.floor(this.subscriptionFee)));
+      subscriptionInput.value = String(clampedFee);
+      const sliderPercent = (clampedFee / 150) * 100;
+      const fillColor = this.gymMainColor ?? '#6ea0ff';
+      subscriptionInput.style.background = `linear-gradient(90deg, ${fillColor} 0%, ${fillColor} ${sliderPercent}%, #111b2c ${sliderPercent}%, #111b2c 100%)`;
+    }
+    if (subscriptionValue) {
+      subscriptionValue.textContent = this.formatEuro(this.subscriptionFee);
     }
     if (membersGainedValue) membersGainedValue.textContent = `${this.lastCycleGained}`;
     if (membersLostValue) membersLostValue.textContent = `${this.lastCycleChurn}`;
@@ -829,6 +842,13 @@ export const interactionUiMethods = {
       gymUpgradesModal.setAttribute('aria-hidden', this.gymUpgradesVisible ? 'false' : 'true');
     }
     this.renderGymUpgrades(gymUpgradesBody);
+
+    gymAdministrationButton?.classList.toggle('is-active', this.gymAdministrationVisible);
+    gymAdministrationModal?.classList.toggle('is-open', this.gymAdministrationVisible);
+    if (gymAdministrationModal) {
+      gymAdministrationModal.setAttribute('aria-hidden', this.gymAdministrationVisible ? 'false' : 'true');
+    }
+    this.renderGymAdministration(gymAdministrationBody);
 
     const selected = this.items.find((item) => item.id === this.selectedDeviceId) ?? null;
     const selectedDecor = this.selectedDecor;
@@ -1559,6 +1579,201 @@ export const interactionUiMethods = {
       row.appendChild(requirements);
       row.appendChild(button);
       gymUpgradesBody.appendChild(row);
+    }
+  },
+
+  renderGymAdministration(gymAdministrationBody) {
+    if (!gymAdministrationBody || !this.openingHoursSchedule) return;
+
+    const scheduleSnapshot = this.openingHoursSchedule.getScheduleSnapshot();
+    const renderKey = JSON.stringify({
+      tab: this.gymAdministrationTab,
+      scheduleSnapshot,
+      staffSalaryPerHour: this.staffSalaryPerHour,
+      staffCount: this.staffCount,
+      staffCostPerHour: this.getStaffCostPerHour?.() ?? 0,
+      staffUtilization: this.getStaffUtilizationLabel?.() ?? 'Good',
+      staffHappiness: this.getStaffHappinessLabel?.() ?? 'Okay'
+    });
+    if (renderKey === this.gymAdministrationRenderStateKey) {
+      return;
+    }
+
+    this.gymAdministrationRenderStateKey = renderKey;
+    gymAdministrationBody.innerHTML = '';
+
+    const tabs = document.createElement('div');
+    tabs.className = 'admin-tabs';
+
+    const openingHoursTab = document.createElement('button');
+    openingHoursTab.type = 'button';
+    openingHoursTab.className = `admin-tab${this.gymAdministrationTab === 'opening-hours' ? ' is-active' : ''}`;
+    openingHoursTab.dataset.adminTab = 'opening-hours';
+    openingHoursTab.textContent = 'Opening Hours';
+
+    const employeesTab = document.createElement('button');
+    employeesTab.type = 'button';
+    employeesTab.className = `admin-tab${this.gymAdministrationTab === 'employees' ? ' is-active' : ''}`;
+    employeesTab.dataset.adminTab = 'employees';
+    employeesTab.textContent = 'Employees';
+
+    tabs.appendChild(openingHoursTab);
+    tabs.appendChild(employeesTab);
+    gymAdministrationBody.appendChild(tabs);
+
+    if (this.gymAdministrationTab === 'employees') {
+      const employeesPanel = document.createElement('article');
+      employeesPanel.className = 'admin-employees-panel';
+
+      const salaryRow = document.createElement('div');
+      salaryRow.className = 'admin-employee-row';
+      const salaryLabel = document.createElement('label');
+      salaryLabel.textContent = 'Salary per Hour';
+
+      const salaryRange = document.createElement('div');
+      salaryRange.className = 'admin-employee-range';
+      const salaryPercent = ((this.staffSalaryPerHour - 5) / (25 - 5)) * 100;
+      const fillColor = this.gymMainColor ?? '#6ea0ff';
+      salaryRange.style.background = `linear-gradient(90deg, ${fillColor} 0%, ${fillColor} ${salaryPercent}%, #111b2c ${salaryPercent}%, #111b2c 100%)`;
+
+      const salaryInput = document.createElement('input');
+      salaryInput.type = 'range';
+      salaryInput.className = 'admin-employee-range-input';
+      salaryInput.min = '5';
+      salaryInput.max = '25';
+      salaryInput.step = '1';
+      salaryInput.value = String(this.staffSalaryPerHour);
+      salaryInput.dataset.employeeMode = 'salary';
+      const salaryValue = document.createElement('span');
+      salaryValue.textContent = `${this.formatEuro(this.staffSalaryPerHour)}`;
+      salaryRow.appendChild(salaryLabel);
+      salaryRange.appendChild(salaryInput);
+      salaryRow.appendChild(salaryRange);
+      salaryRow.appendChild(salaryValue);
+
+      const staffCountRow = document.createElement('div');
+      staffCountRow.className = 'admin-employee-row';
+      const staffCountLabel = document.createElement('label');
+      staffCountLabel.textContent = 'Staff Count';
+
+      const staffCountRange = document.createElement('div');
+      staffCountRange.className = 'admin-employee-range';
+      const staffCountPercent = ((this.staffCount - 1) / (10 - 1)) * 100;
+      staffCountRange.style.background = `linear-gradient(90deg, ${fillColor} 0%, ${fillColor} ${staffCountPercent}%, #111b2c ${staffCountPercent}%, #111b2c 100%)`;
+
+      const staffCountInput = document.createElement('input');
+      staffCountInput.type = 'range';
+      staffCountInput.className = 'admin-employee-range-input';
+      staffCountInput.min = '1';
+      staffCountInput.max = '10';
+      staffCountInput.step = '1';
+      staffCountInput.value = String(this.staffCount);
+      staffCountInput.dataset.employeeMode = 'count';
+      const staffCountValue = document.createElement('span');
+      staffCountValue.textContent = `${this.staffCount}`;
+      staffCountRow.appendChild(staffCountLabel);
+      staffCountRange.appendChild(staffCountInput);
+      staffCountRow.appendChild(staffCountRange);
+      staffCountRow.appendChild(staffCountValue);
+
+      const infoList = document.createElement('div');
+      infoList.className = 'admin-employee-metrics';
+
+      const staffCost = document.createElement('p');
+      staffCost.className = 'admin-employee-metric';
+      staffCost.textContent = `Staff Cost per Hour: ${this.formatEuro(this.getStaffCostPerHour?.() ?? 0)}`;
+
+      const staffUtilization = document.createElement('p');
+      staffUtilization.className = 'admin-employee-metric';
+      staffUtilization.textContent = `Staff Utilization: ${this.getStaffUtilizationLabel?.() ?? 'Good'}`;
+
+      const staffHappiness = document.createElement('p');
+      staffHappiness.className = 'admin-employee-metric';
+      staffHappiness.textContent = `Staff Happiness: ${this.getStaffHappinessLabel?.() ?? 'Okay'}`;
+
+      infoList.appendChild(staffCost);
+      infoList.appendChild(staffUtilization);
+      infoList.appendChild(staffHappiness);
+
+      employeesPanel.appendChild(salaryRow);
+      employeesPanel.appendChild(staffCountRow);
+      employeesPanel.appendChild(infoList);
+      gymAdministrationBody.appendChild(employeesPanel);
+      return;
+    }
+
+    for (let weekday = 0; weekday < 7; weekday += 1) {
+      const hours = this.openingHoursSchedule.getHoursForWeekday(weekday);
+
+      const row = document.createElement('article');
+      row.className = 'admin-hours-row';
+
+      const header = document.createElement('div');
+      header.className = 'admin-hours-header';
+
+      const title = document.createElement('h3');
+      title.className = 'admin-hours-title';
+      title.textContent = WEEKDAY_NAMES[weekday] ?? `Day ${weekday + 1}`;
+
+      const value = document.createElement('p');
+      value.className = 'admin-hours-value';
+      value.textContent = `${String(hours.openHour).padStart(2, '0')}:00 - ${String(hours.closeHour).padStart(2, '0')}:00`;
+
+      header.appendChild(title);
+      header.appendChild(value);
+
+      const sliders = document.createElement('div');
+      sliders.className = 'admin-hours-sliders';
+
+      const rangeTrack = document.createElement('div');
+      rangeTrack.className = 'admin-hours-range';
+      rangeTrack.dataset.weekday = String(weekday);
+      const openPercent = (hours.openHour / 24) * 100;
+      const closePercent = (hours.closeHour / 24) * 100;
+      const fillColor = this.gymMainColor ?? '#6ea0ff';
+      rangeTrack.style.background = `linear-gradient(90deg, #111b2c 0%, #111b2c ${openPercent}%, ${fillColor} ${openPercent}%, ${fillColor} ${closePercent}%, #111b2c ${closePercent}%, #111b2c 100%)`;
+
+      const openInput = document.createElement('input');
+      openInput.type = 'range';
+      openInput.className = 'admin-hours-range-input admin-hours-range-input--open';
+      openInput.min = '0';
+      openInput.max = '24';
+      openInput.step = '1';
+      openInput.value = String(hours.openHour);
+      openInput.dataset.weekday = String(weekday);
+      openInput.dataset.mode = 'open';
+
+      const closeInput = document.createElement('input');
+      closeInput.type = 'range';
+      closeInput.className = 'admin-hours-range-input admin-hours-range-input--close';
+      closeInput.min = '0';
+      closeInput.max = '24';
+      closeInput.step = '1';
+      closeInput.value = String(hours.closeHour);
+      closeInput.dataset.weekday = String(weekday);
+      closeInput.dataset.mode = 'close';
+
+      rangeTrack.appendChild(openInput);
+      rangeTrack.appendChild(closeInput);
+
+      const valueRow = document.createElement('div');
+      valueRow.className = 'admin-hours-value-row';
+
+      const openValue = document.createElement('span');
+      openValue.textContent = `Open ${String(hours.openHour).padStart(2, '0')}:00`;
+
+      const closeValue = document.createElement('span');
+      closeValue.textContent = `Close ${String(hours.closeHour).padStart(2, '0')}:00`;
+
+      valueRow.appendChild(openValue);
+      valueRow.appendChild(closeValue);
+
+      sliders.appendChild(rangeTrack);
+      sliders.appendChild(valueRow);
+
+      row.appendChild(header);
+      row.appendChild(sliders);
+      gymAdministrationBody.appendChild(row);
     }
   }
 };

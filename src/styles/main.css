@@ -106,20 +106,64 @@ body {
   outline: none;
 }
 
-.fee-metric input[type='text'] {
+.fee-slider {
+  position: relative;
   width: 100%;
-  margin-top: 0.2rem;
+  height: 0.9rem;
+  margin-top: 0.25rem;
   border: 1px solid #3a506f;
-  border-radius: 0.5rem;
-  background: #111b2c;
-  color: #f8fafc;
-  padding: 0.35rem 0.45rem;
-  font-size: 0.9rem;
+  border-radius: 999px;
 }
 
-.fee-metric input[type='text']:focus {
-  outline: none;
-  border-color: #6ea0ff;
+.fee-slider-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  margin: 0;
+  border: 0;
+  background: #111b2c;
+  border-radius: 999px;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.fee-slider-input::-webkit-slider-runnable-track {
+  height: 0.9rem;
+  background: transparent;
+  border: 0;
+}
+
+.fee-slider-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 0.72rem;
+  height: 1rem;
+  margin-top: -1px;
+  border-radius: 0.15rem;
+  border: 1px solid #cbd5e1;
+  background: #e2e8f0;
+  box-shadow: 0 0 0 1px rgb(15 23 42 / 50%);
+  cursor: ew-resize;
+}
+
+.fee-slider-input::-moz-range-track {
+  height: 0.9rem;
+  background: transparent;
+  border: 0;
+}
+
+.fee-slider-input::-moz-range-thumb {
+  width: 0.72rem;
+  height: 1rem;
+  border-radius: 0.15rem;
+  border: 1px solid #cbd5e1;
+  background: #e2e8f0;
+  box-shadow: 0 0 0 1px rgb(15 23 42 / 50%);
+  cursor: ew-resize;
+}
+
+.fee-metric #subscription-value {
+  margin-top: 0.22rem;
+  font-size: 0.9rem;
 }
 
 .game-shell {
@@ -659,6 +703,17 @@ body {
   cursor: pointer;
 }
 
+#gym-administration-btn {
+  border: 1px solid #3a506f;
+  border-radius: 0.65rem;
+  background: #14243d;
+  color: #dbe8fb;
+  font-weight: 600;
+  padding: 0.55rem 0.9rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
 #gym-upgrades-btn {
   border: 1px solid #c2410c;
   border-radius: 0.65rem;
@@ -687,6 +742,11 @@ body {
 }
 
 #member-list-btn.is-active {
+  border-color: #6ea0ff;
+  background: #1a3b67;
+}
+
+#gym-administration-btn.is-active {
   border-color: #6ea0ff;
   background: #1a3b67;
 }
@@ -850,6 +910,26 @@ body {
   bottom: 0.9rem;
 }
 
+#tutorial-modal {
+  position: absolute;
+  inset: auto;
+  left: 0.9rem;
+  bottom: 4.3rem;
+  z-index: 8;
+  background: transparent;
+  pointer-events: none;
+}
+
+#tutorial-modal.is-open {
+  display: block;
+}
+
+#tutorial-modal .tutorial-modal-card {
+  width: min(360px, calc(100vw - 1.8rem));
+  min-height: 0;
+  pointer-events: auto;
+}
+
 .tutorial-modal-card {
   min-height: 220px;
 }
@@ -904,7 +984,7 @@ body {
 
 .bottom-bar-controls {
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: 1fr auto auto auto;
   gap: 0.45rem;
   align-items: center;
 }
@@ -927,7 +1007,8 @@ body {
 }
 
 #member-list-close-btn,
-#gym-upgrades-close-btn {
+#gym-upgrades-close-btn,
+#gym-administration-close-btn {
   width: 1.9rem;
   height: 1.9rem;
   border: 1px solid #3a506f;
@@ -941,7 +1022,9 @@ body {
 #member-list-close-btn:hover,
 #member-list-close-btn:focus-visible,
 #gym-upgrades-close-btn:hover,
-#gym-upgrades-close-btn:focus-visible {
+#gym-upgrades-close-btn:focus-visible,
+#gym-administration-close-btn:hover,
+#gym-administration-close-btn:focus-visible {
   border-color: #6ea0ff;
   background: #1a3b67;
   outline: none;
@@ -955,11 +1038,250 @@ body {
   min-height: 320px;
 }
 
+.gym-administration-modal-card {
+  min-height: 340px;
+}
+
 .gym-upgrades-body {
   display: grid;
   gap: 0.55rem;
   max-height: 420px;
   overflow-y: auto;
+}
+
+.gym-administration-body {
+  display: grid;
+  gap: 0.55rem;
+  max-height: 460px;
+  overflow-y: auto;
+}
+
+.admin-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.admin-tab {
+  border: 1px solid #344760;
+  border-radius: 0.6rem;
+  background: #132037;
+  color: #dbe8fb;
+  padding: 0.45rem 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.admin-tab.is-active {
+  border-color: #6ea0ff;
+  background: #1d3560;
+}
+
+.admin-employees-panel {
+  border: 1px solid #2f435f;
+  border-radius: 0.65rem;
+  background: rgb(14 24 40 / 75%);
+  padding: 0.65rem;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.admin-employee-row {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr) 88px;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.admin-employee-row label {
+  color: #bfd3ec;
+  font-size: 0.76rem;
+}
+
+.admin-employee-row input[type='range'] {
+  width: 100%;
+}
+
+.admin-employee-range {
+  position: relative;
+  height: 0.9rem;
+  border: 1px solid #2f435f;
+  border-radius: 999px;
+  overflow: visible;
+}
+
+.admin-employee-range-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  margin: 0;
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.admin-employee-range-input::-webkit-slider-runnable-track {
+  height: 0.9rem;
+  background: transparent;
+  border: 0;
+}
+
+.admin-employee-range-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  pointer-events: auto;
+  margin-top: -1px;
+  width: 0.72rem;
+  height: 1rem;
+  border-radius: 0.15rem;
+  border: 1px solid #cbd5e1;
+  background: #e2e8f0;
+  box-shadow: 0 0 0 1px rgb(15 23 42 / 50%);
+  cursor: ew-resize;
+}
+
+.admin-employee-range-input::-moz-range-track {
+  height: 0.9rem;
+  background: transparent;
+  border: 0;
+}
+
+.admin-employee-range-input::-moz-range-thumb {
+  pointer-events: auto;
+  width: 0.72rem;
+  height: 1rem;
+  border-radius: 0.15rem;
+  border: 1px solid #cbd5e1;
+  background: #e2e8f0;
+  box-shadow: 0 0 0 1px rgb(15 23 42 / 50%);
+  cursor: ew-resize;
+}
+
+.admin-employee-row span {
+  color: #dbe8fb;
+  font-size: 0.76rem;
+  text-align: right;
+}
+
+.admin-employee-metrics {
+  display: grid;
+  gap: 0.25rem;
+  border-top: 1px solid #2f435f;
+  padding-top: 0.5rem;
+}
+
+.admin-employee-metric {
+  margin: 0;
+  color: #dbe8fb;
+  font-size: 0.8rem;
+}
+
+.admin-hours-row {
+  border: 1px solid #2f435f;
+  border-radius: 0.65rem;
+  background: rgb(14 24 40 / 75%);
+  padding: 0.65rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.admin-hours-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.admin-hours-title {
+  margin: 0;
+  color: #e2e8f0;
+  font-size: 0.88rem;
+}
+
+.admin-hours-value {
+  margin: 0;
+  color: #93a8c7;
+  font-size: 0.78rem;
+}
+
+.admin-hours-sliders {
+  display: grid;
+  gap: 0.38rem;
+}
+
+.admin-hours-range {
+  position: relative;
+  height: 0.9rem;
+  border: 1px solid #2f435f;
+  border-radius: 999px;
+  overflow: visible;
+}
+
+.admin-hours-range-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  margin: 0;
+  background: transparent;
+  pointer-events: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.admin-hours-range-input::-webkit-slider-runnable-track {
+  height: 0.9rem;
+  background: transparent;
+  border: 0;
+}
+
+.admin-hours-range-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  pointer-events: auto;
+  margin-top: -1px;
+  width: 0.72rem;
+  height: 1rem;
+  border-radius: 0.15rem;
+  border: 1px solid #cbd5e1;
+  background: #e2e8f0;
+  box-shadow: 0 0 0 1px rgb(15 23 42 / 50%);
+  cursor: ew-resize;
+}
+
+.admin-hours-range-input::-moz-range-track {
+  height: 0.9rem;
+  background: transparent;
+  border: 0;
+}
+
+.admin-hours-range-input::-moz-range-thumb {
+  pointer-events: auto;
+  width: 0.72rem;
+  height: 1rem;
+  border-radius: 0.15rem;
+  border: 1px solid #cbd5e1;
+  background: #e2e8f0;
+  box-shadow: 0 0 0 1px rgb(15 23 42 / 50%);
+  cursor: ew-resize;
+}
+
+.admin-hours-range-input--open {
+  z-index: 2;
+}
+
+.admin-hours-range-input--close {
+  z-index: 3;
+}
+
+.admin-hours-value-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.admin-hours-value-row span {
+  color: #dbe8fb;
+  font-size: 0.76rem;
 }
 
 .upgrade-row {

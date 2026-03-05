@@ -10,7 +10,8 @@ export const itemCatalogMethods = {
   },
 
   applyMaintenanceAfterUse(item) {
-    const chance = item.breakChance;
+    const staffReduction = this.getStaffBreakChanceReduction?.() ?? 0;
+    const chance = Math.max(0, item.breakChance - staffReduction);
 
     item.totalUses += 1;
     if (this.shouldIncreaseDeviceBreakChance()) {

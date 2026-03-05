@@ -13,6 +13,13 @@ import {
   SATISFACTION_MAX,
   SATISFACTION_MIN
 } from './mainSceneConfig.js';
+import { ArrivalSpawner } from '../systems/simulation/ArrivalSpawner.js';
+import { DemandModel } from '../systems/simulation/DemandModel.js';
+import { OpeningHoursSchedule } from '../systems/simulation/OpeningHoursSchedule.js';
+import { SIMULATION_DEFAULTS, WEATHER_TYPES } from '../systems/simulation/config.js';
+import { TimeKeeper } from '../systems/simulation/TimeKeeper.js';
+import { getTimeBarUiState } from '../systems/simulation/uiTimeHelpers.js';
+import { WeatherGenerator } from '../systems/simulation/WeatherGenerator.js';
 
 export class MainScene {
   constructor({ ui, onGameOver }) {
@@ -125,8 +132,6 @@ export class MainScene {
     this.monthlyEncountersGrowth = selectedLocation.monthlyEncountersGrowth ?? 1;
     this.elapsedMonths = 0;
 
-    this.cycleIntervalSeconds = 45;
-    this.cycleTimer = 0;
     this.lastCycleIncome = 0;
     this.lastCycleDayTicketIncome = 0;
     this.lastCycleChurn = 0;
@@ -136,8 +141,10 @@ export class MainScene {
     this.currentCycleDayTicketIncome = 0;
     this.monthSatisfactionSum = 0;
     this.monthSatisfactionCount = 0;
-    this.currentMonth = 1;
-    this.currentYear = 26;
+    this.currentMonth = SIMULATION_DEFAULTS.time.startMonth;
+    this.currentYear = SIMULATION_DEFAULTS.time.startYear;
+    this.currentWeekday = SIMULATION_DEFAULTS.time.startWeekday;
+    this.currentDayInMonth = SIMULATION_DEFAULTS.time.startDayInMonth;
     this.monthlyStatistics = [];
     this.monthlyBankHistory = [];
     this.monthlyPopularityHistory = [];
@@ -170,12 +177,8 @@ export class MainScene {
 
     this.people = [];
     this.nextPersonId = 1;
-    this.spawnTimer = 0;
-    this.monthlyNonMemberEncounterTarget = 0;
-    this.monthlyNonMemberEncountersSpawned = 0;
-    this.monthlyMemberSpawnQueue = [];
-    this.monthlyTotalSpawnTarget = 0;
-    this.monthlyTotalSpawned = 0;
+    this.currentExpectedArrivalsPerInGameMinute = 0;
+    this.currentWeatherState = { type: WEATHER_TYPES.CLOUDY, temperatureC: 12 };
 
     this.hoveredTile = null;
     this.hoveredWallSegment = null;
@@ -194,6 +197,8 @@ export class MainScene {
     this.debugVisible = false;
     this.memberListVisible = false;
     this.gymUpgradesVisible = false;
+    this.gymAdministrationVisible = false;
+    this.gymAdministrationTab = 'opening-hours';
     this.activeStatisticKey = null;
     this.selectedDeviceId = null;
     this.selectedDecor = null;
@@ -201,7 +206,7 @@ export class MainScene {
     this.lastMapLayout = null;
     this.purchasedGymUpgrades = new Set();
 
-    this.tutorialVisible = false;
+    this.tutorialVisible = Boolean(showTutorialWelcome);
     this.tutorialWelcomeVisible = Boolean(showTutorialWelcome);
     this.tutorialCompleteVisible = false;
     this.tutorialHasShownCompletion = false;
@@ -209,12 +214,62 @@ export class MainScene {
     this.tutorialStageCompletions = [false, false, false];
     this.tutorialRenderStateKey = '';
     this.gymUpgradesRenderStateKey = '';
+    this.gymAdministrationRenderStateKey = '';
+    this.gymAdministrationDragState = null;
+    this.staffSalaryPerHour = 10;
+    this.staffCount = 3;
 
-    this.initializeMonthlySpawnPlan();
+    this.initializeSimulationSystems(selectedLocation);
+    this.refreshCurrentWeather();
+    this.syncCalendarFromTimeKeeper();
 
     this.buildBuyPanelButtons();
     this.recordMonthlyMetricsSnapshot(this.getCurrentMonthLabel());
     this.refreshUi();
+  }
+
+  initializeSimulationSystems(selectedLocation) {
+    this.timeKeeper = new TimeKeeper({
+      ...SIMULATION_DEFAULTS.time,
+      startMonth: SIMULATION_DEFAULTS.time.startMonth,
+      startYear: SIMULATION_DEFAULTS.time.startYear
+    });
+
+    this.openingHoursSchedule = new OpeningHoursSchedule();
+    this.weatherGenerator = new WeatherGenerator({
+      ...SIMULATION_DEFAULTS.weather,
+      seed: selectedLocation?.weatherSeed ?? SIMULATION_DEFAULTS.weather.seed
+    });
+    this.demandModel = new DemandModel();
+    this.arrivalSpawner = new ArrivalSpawner();
+
+    this.timeKeeper.on(TimeKeeper.Events.DAY_START, () => {
+      this.syncCalendarFromTimeKeeper();
+      this.refreshCurrentWeather();
+    });
+
+    this.timeKeeper.on(TimeKeeper.Events.MONTH_END, () => {
+      this.processEconomyCycle();
+    });
+  }
+
+  syncCalendarFromTimeKeeper() {
+    if (!this.timeKeeper) return;
+    const dateTime = this.timeKeeper.getCurrentDateTimeStruct();
+    this.currentMonth = dateTime.month;
+    this.currentYear = dateTime.year;
+    this.currentWeekday = dateTime.weekday;
+    this.currentDayInMonth = dateTime.dayInMonth;
+  }
+
+  refreshCurrentWeather() {
+    if (!this.timeKeeper || !this.weatherGenerator) return;
+    const dateTime = this.timeKeeper.getCurrentDateTimeStruct();
+    this.currentWeatherState = this.weatherGenerator.generateWeatherForDay(
+      dateTime.year,
+      dateTime.month,
+      dateTime.dayInMonth
+    );
   }
 
   bindUi() {
@@ -236,6 +291,10 @@ export class MainScene {
       gymUpgradesModal,
       gymUpgradesCloseButton,
       gymUpgradesBody,
+      gymAdministrationButton,
+      gymAdministrationModal,
+      gymAdministrationCloseButton,
+      gymAdministrationBody,
       memberListButton,
       memberListModal,
       memberListCloseButton,
@@ -353,6 +412,159 @@ export class MainScene {
       this.purchaseGymUpgrade(upgradeKey);
     });
 
+    gymAdministrationButton?.addEventListener('click', () => {
+      this.gymAdministrationVisible = !this.gymAdministrationVisible;
+      if (this.gymAdministrationVisible) {
+        this.gymAdministrationTab = this.gymAdministrationTab ?? 'opening-hours';
+      }
+      this.updateUiMetrics();
+    });
+
+    gymAdministrationCloseButton?.addEventListener('click', () => {
+      this.gymAdministrationVisible = false;
+      this.updateUiMetrics();
+    });
+
+    gymAdministrationModal?.addEventListener('click', (event) => {
+      if (event.target !== gymAdministrationModal) return;
+      this.gymAdministrationVisible = false;
+      this.updateUiMetrics();
+    });
+
+    const applyGymAdministrationHours = (weekday, mode, rawValue) => {
+      const nextValue = Number.parseInt(String(rawValue), 10);
+      if (!Number.isFinite(nextValue)) {
+        return;
+      }
+
+      const current = this.openingHoursSchedule.getHoursForWeekday(weekday);
+      let openHour = current.openHour;
+      let closeHour = current.closeHour;
+
+      if (mode === 'open') {
+        openHour = Math.min(Math.max(0, nextValue), closeHour - 1);
+      } else {
+        closeHour = Math.max(Math.min(24, nextValue), openHour + 1);
+      }
+
+      this.openingHoursSchedule.setHoursForWeekday(weekday, openHour, closeHour);
+      this.updateUiMetrics();
+    };
+
+    gymAdministrationBody?.addEventListener('input', (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLInputElement)) return;
+      if (target.dataset.employeeMode === 'salary') {
+        const value = Number.parseInt(target.value, 10);
+        if (Number.isFinite(value)) {
+          this.staffSalaryPerHour = Math.max(5, Math.min(25, value));
+          this.updateUiMetrics();
+        }
+        return;
+      }
+
+      if (target.dataset.employeeMode === 'count') {
+        const value = Number.parseInt(target.value, 10);
+        if (Number.isFinite(value)) {
+          this.staffCount = Math.max(1, Math.min(10, value));
+          this.updateUiMetrics();
+        }
+        return;
+      }
+
+      if (!target.classList.contains('admin-hours-range-input')) return;
+
+      const weekdayRaw = target.dataset.weekday;
+      const mode = target.dataset.mode;
+      if (weekdayRaw === undefined || (mode !== 'open' && mode !== 'close')) {
+        return;
+      }
+
+      const weekday = Number.parseInt(weekdayRaw, 10);
+      if (!Number.isFinite(weekday)) {
+        return;
+      }
+
+      applyGymAdministrationHours(weekday, mode, target.value);
+    });
+
+    gymAdministrationBody?.addEventListener('click', (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLButtonElement)) return;
+
+      const nextTab = target.dataset.adminTab;
+      if (nextTab !== 'opening-hours' && nextTab !== 'employees') {
+        return;
+      }
+
+      this.gymAdministrationTab = nextTab;
+      this.updateUiMetrics();
+    });
+
+    const applyGymAdministrationDrag = (rangeElement, weekday, mode, clientX) => {
+      const rect = rangeElement.getBoundingClientRect();
+      if (rect.width <= 0) return;
+
+      const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+      const snappedHour = Math.round(ratio * 24);
+      applyGymAdministrationHours(weekday, mode, snappedHour);
+    };
+
+    gymAdministrationBody?.addEventListener('pointerdown', (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+
+      const rangeElement = target.closest('.admin-hours-range');
+      if (!(rangeElement instanceof HTMLElement)) return;
+
+      const weekdayRaw = rangeElement.dataset.weekday;
+      const weekday = Number.parseInt(weekdayRaw ?? '', 10);
+      if (!Number.isFinite(weekday)) return;
+
+      let mode = 'open';
+      if (target instanceof HTMLInputElement && target.classList.contains('admin-hours-range-input')) {
+        mode = target.dataset.mode === 'close' ? 'close' : 'open';
+      } else {
+        const current = this.openingHoursSchedule.getHoursForWeekday(weekday);
+        const rect = rangeElement.getBoundingClientRect();
+        const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+        const targetHour = ratio * 24;
+        mode = Math.abs(targetHour - current.openHour) <= Math.abs(targetHour - current.closeHour) ? 'open' : 'close';
+      }
+
+      this.gymAdministrationDragState = {
+        rangeElement,
+        weekday,
+        mode,
+        pointerId: event.pointerId
+      };
+
+      rangeElement.setPointerCapture?.(event.pointerId);
+      applyGymAdministrationDrag(rangeElement, weekday, mode, event.clientX);
+      event.preventDefault();
+    });
+
+    gymAdministrationBody?.addEventListener('pointermove', (event) => {
+      const state = this.gymAdministrationDragState;
+      if (!state) return;
+      if (state.pointerId !== event.pointerId) return;
+
+      applyGymAdministrationDrag(state.rangeElement, state.weekday, state.mode, event.clientX);
+      event.preventDefault();
+    });
+
+    const stopGymAdministrationDrag = (event) => {
+      const state = this.gymAdministrationDragState;
+      if (!state) return;
+      if (state.pointerId !== event.pointerId) return;
+
+      state.rangeElement.releasePointerCapture?.(state.pointerId);
+      this.gymAdministrationDragState = null;
+    };
+
+    gymAdministrationBody?.addEventListener('pointerup', stopGymAdministrationDrag);
+    gymAdministrationBody?.addEventListener('pointercancel', stopGymAdministrationDrag);
+
     memberListCloseButton?.addEventListener('click', () => {
       this.memberListVisible = false;
       this.updateUiMetrics();
@@ -414,18 +626,14 @@ export class MainScene {
       const target = event.currentTarget;
       if (!(target instanceof HTMLInputElement)) return;
 
-      const parsedValue = Number.parseInt(target.value.replace(/[^\d]/g, ''), 10);
+      const parsedValue = Number.parseInt(target.value, 10);
       if (Number.isNaN(parsedValue)) return;
-      this.subscriptionFee = Math.max(0, parsedValue);
-      this.updateUiMetrics();
-    });
-
-    subscriptionInput?.addEventListener('blur', () => {
+      this.subscriptionFee = Math.max(0, Math.min(150, parsedValue));
       this.updateUiMetrics();
     });
 
     if (subscriptionInput) {
-      subscriptionInput.value = `€${this.subscriptionFee}`;
+      subscriptionInput.value = String(this.subscriptionFee);
     }
     if (monthlyCostsValue) {
       monthlyCostsValue.textContent = `€${Math.floor(this.getMonthlyCosts())}`;
@@ -519,11 +727,14 @@ export class MainScene {
     if (this.isGymUpgradePurchased('airConditioning')) {
       multiplier *= 0.75;
     }
+    multiplier *= Math.max(0.5, 1 - this.staffCount * 0.02);
     return multiplier;
   }
 
   getCheckInDurationMultiplier() {
-    return this.isGymUpgradePurchased('receptionStaff') ? 0.75 : 1;
+    const upgradeMultiplier = this.isGymUpgradePurchased('receptionStaff') ? 0.75 : 1;
+    const staffMultiplier = Math.max(0.1, 1 - this.staffCount * 0.1);
+    return upgradeMultiplier * staffMultiplier;
   }
 
   getBaseHappinessBonus() {
@@ -534,7 +745,67 @@ export class MainScene {
     if (this.isGymUpgradePurchased('receptionStaff')) {
       bonus += 5;
     }
+    bonus += this.staffCount * 5;
     return bonus;
+  }
+
+  getStaffBreakChanceReduction() {
+    return Math.max(0, Math.min(0.5, this.staffCount * 0.01));
+  }
+
+  getStaffCostPerHour() {
+    return this.staffSalaryPerHour * this.staffCount;
+  }
+
+  getPeoplePresentInGymCount() {
+    const outsideStates = new Set([
+      'to-entrance-sidewalk',
+      'street-passing',
+      'sidewalk-passing',
+      'to-street',
+      'street-to-entrance',
+      'leaving-door',
+      'leaving-cross-street',
+      'leaving-far-sidewalk',
+      'remove',
+      'leaving'
+    ]);
+
+    return this.people.filter((person) => person.hasCompletedCheckIn && !outsideStates.has(person.state)).length;
+  }
+
+  getStaffUtilizationLabel() {
+    const peoplePresent = this.getPeoplePresentInGymCount();
+    const requiredStaff = peoplePresent / 10;
+
+    if (this.staffCount < requiredStaff) {
+      return 'Understaffed';
+    }
+
+    if (this.staffCount > requiredStaff * 2) {
+      return 'Overstaffed';
+    }
+
+    return 'Good';
+  }
+
+  getProjectedIncomeEstimate() {
+    const projectedMembersIncome = this.members * this.subscriptionFee;
+    const projectedDayTicketIncome = this.lastCycleDayTicketIncome;
+    return projectedMembersIncome + projectedDayTicketIncome;
+  }
+
+  getStaffHappinessLabel() {
+    const projectedIncome = this.getProjectedIncomeEstimate();
+    if (this.staffSalaryPerHour < projectedIncome / 200) {
+      return 'Poor';
+    }
+
+    if (this.staffSalaryPerHour > projectedIncome / 100) {
+      return 'Good';
+    }
+
+    return 'Okay';
   }
 
   getRepairDurationSeconds() {
@@ -830,17 +1101,32 @@ export class MainScene {
     this.handlePlacementClick(game);
     if (this.evaluateBankState()) return;
 
-    this.spawnTimer += deltaSeconds;
-    while (this.spawnTimer >= this.getSpawnIntervalSeconds()) {
-      this.spawnIncomingPerson(mapLayout);
-      this.spawnTimer -= this.getSpawnIntervalSeconds();
-    }
+    this.timeKeeper.update(deltaSeconds);
+    this.syncCalendarFromTimeKeeper();
 
-    this.cycleTimer += deltaSeconds;
-    while (this.cycleTimer >= this.cycleIntervalSeconds) {
-      this.processEconomyCycle();
-      this.cycleTimer -= this.cycleIntervalSeconds;
-      if (this.isGameOver) return;
+    const dateTime = this.timeKeeper.getCurrentDateTimeStruct();
+    const isOpen = this.openingHoursSchedule.isOpen(dateTime);
+    const weatherMultiplier =
+      SIMULATION_DEFAULTS.weather.demandMultiplierByType[this.currentWeatherState?.type] ?? 1;
+    const gymReputationMultiplier = this.getGymReputationDemandMultiplier();
+    const priceMultiplier = this.getPriceDemandMultiplier();
+    const baseDemandPerMinute = this.getBaseDemandPerInGameMinute();
+
+    this.currentExpectedArrivalsPerInGameMinute = this.demandModel.computeExpectedArrivalsPerInGameMinute({
+      isOpen,
+      weekday: dateTime.weekday,
+      hour: dateTime.timeOfDayHours,
+      month: dateTime.month,
+      weatherMultiplier,
+      baseDemandPerMinute,
+      gymReputationMultiplier,
+      priceMultiplier
+    });
+
+    if (isOpen) {
+      this.arrivalSpawner.update(deltaSeconds, this.currentExpectedArrivalsPerInGameMinute, () => {
+        return this.spawnIncomingPerson(mapLayout);
+      });
     }
 
     this.updateBrokenDevices(deltaSeconds);
@@ -896,7 +1182,7 @@ export class MainScene {
     this.monthSatisfactionCount = 0;
     this.currentCycleLockerTurnedDown = 0;
     this.monthStartBank = this.money;
-    this.advanceMonth();
+    this.elapsedMonths += 1;
     this.evaluateBankState();
   }
 
@@ -945,70 +1231,66 @@ export class MainScene {
     }
   }
 
-  advanceMonth() {
-    this.elapsedMonths += 1;
-    this.currentMonth += 1;
-    if (this.currentMonth > 12) {
-      this.currentMonth = 1;
-      this.currentYear = (this.currentYear + 1) % 100;
-    }
-
-    this.initializeMonthlySpawnPlan();
-  }
-
-  getSpawnIntervalSeconds() {
-    const remainingSpawns = this.monthlyTotalSpawnTarget - this.monthlyTotalSpawned;
-    if (remainingSpawns <= 0) {
-      return Number.POSITIVE_INFINITY;
-    }
-
-    return Math.max(0.35, this.cycleIntervalSeconds / this.monthlyTotalSpawnTarget);
-  }
-
-  getMonthlyNonMemberEncounterTarget() {
-    return Math.max(
-      1,
-      this.monthlyEncountersBase + this.monthlyEncountersGrowth * this.elapsedMonths
-    );
-  }
-
-  initializeMonthlySpawnPlan() {
-    const nonMemberTarget = this.getMonthlyNonMemberEncounterTarget();
-    const memberTarget = Math.floor(this.memberProfiles.length / 2);
-    const shuffledMembers = [...this.memberProfiles].sort(() => Math.random() - 0.5);
-
-    this.monthlyNonMemberEncounterTarget = nonMemberTarget;
-    this.monthlyNonMemberEncountersSpawned = 0;
-    this.monthlyMemberSpawnQueue = shuffledMembers.slice(0, memberTarget);
-    this.monthlyTotalSpawnTarget = nonMemberTarget + this.monthlyMemberSpawnQueue.length;
-    this.monthlyTotalSpawned = 0;
-    this.spawnTimer = 0;
-  }
-
   chooseIncomingVisitorProfile() {
-    const remainingNonMember =
-      this.monthlyNonMemberEncounterTarget - this.monthlyNonMemberEncountersSpawned;
-    const remainingMembers = this.monthlyMemberSpawnQueue.length;
-
-    if (remainingNonMember <= 0 && remainingMembers <= 0) {
-      return null;
-    }
-
     const shouldSpawnMember =
-      remainingMembers > 0 &&
-      (remainingNonMember <= 0 || Math.random() < remainingMembers / (remainingMembers + remainingNonMember));
+      this.memberProfiles.length > 0 && Math.random() < this.getReturningMemberVisitChance();
 
     if (shouldSpawnMember) {
+      const randomIndex = Math.floor(Math.random() * this.memberProfiles.length);
       return {
-        memberProfile: this.monthlyMemberSpawnQueue.pop(),
+        memberProfile: this.memberProfiles[randomIndex],
         isMember: true
       };
     }
 
-    this.monthlyNonMemberEncountersSpawned += 1;
     return {
       memberProfile: null,
       isMember: false
+    };
+  }
+
+  getBaseDemandPerInGameMinute() {
+    const monthTarget = Math.max(1, this.monthlyEncountersBase + this.monthlyEncountersGrowth * this.elapsedMonths);
+    const minutesPerMonth = SIMULATION_DEFAULTS.time.daysPerMonth * 24 * 60;
+    return monthTarget / minutesPerMonth;
+  }
+
+  getGymReputationDemandMultiplier() {
+    const normalizedPopularity = Math.max(0, Math.min(1.5, this.popularity / 100));
+    return 0.75 + normalizedPopularity * 0.5;
+  }
+
+  getPriceDemandMultiplier() {
+    const idealPrice = 30;
+    const priceDelta = this.subscriptionFee - idealPrice;
+    const multiplier = 1 - priceDelta * 0.01;
+    return Math.max(0.65, Math.min(1.25, multiplier));
+  }
+
+  getDemandFactorAtHour(weekday, hour) {
+    return this.demandModel.getDemandFactorAtHour(weekday, hour);
+  }
+
+  GetDemandFactorAtHour(weekday, hour) {
+    return this.getDemandFactorAtHour(weekday, hour);
+  }
+
+  getTimeBarUiState() {
+    const dateTime = this.timeKeeper.getCurrentDateTimeStruct();
+    const baseState = getTimeBarUiState(dateTime);
+    const weatherType = this.currentWeatherState?.type ?? 'Cloudy';
+    const weatherEmojiByType = {
+      Sunny: '☀️',
+      Cloudy: '☁️',
+      Rainy: '🌧️',
+      Snowy: '❄️'
+    };
+
+    return {
+      ...baseState,
+      isOpen: this.openingHoursSchedule.isOpen(dateTime),
+      weatherLabel: weatherType,
+      weatherEmoji: weatherEmojiByType[weatherType] ?? '☁️'
     };
   }
 
@@ -1105,7 +1387,6 @@ export class MainScene {
     });
 
     this.nextPersonId += 1;
-    this.monthlyTotalSpawned += 1;
     return true;
   }
 
