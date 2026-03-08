@@ -6,6 +6,29 @@ import ellipticalRotation0 from '../assets/devices/elliptical/elliptical-r0.png'
 import ellipticalRotation1 from '../assets/devices/elliptical/elliptical-r1.png';
 import ellipticalRotation2 from '../assets/devices/elliptical/elliptical-r2.png';
 import ellipticalRotation3 from '../assets/devices/elliptical/elliptical-r3.png';
+import dumbbellStationRotation1 from '../assets/devices/dumbbellStation/dumbbellStation-r1.png';
+import chestPressRotation1 from '../assets/devices/chestPress/chestPress-r1.png';
+import barbellRackRotation1 from '../assets/devices/barbellRack/barbellRack-r1.png';
+import benchPressRotation1 from '../assets/devices/benchPress/benchPress-r1.png';
+import battleRopesRotation1 from '../assets/devices/battleRopes/battleRopes-r1.png';
+
+const DEVICE_ASSET_MODULES = import.meta.glob('../assets/devices/*/*-r[0-3].png', {
+  eager: true,
+  import: 'default'
+});
+
+function getCatalogAssetRotations(itemKey) {
+  const rotationSources = [0, 1, 2, 3].map(
+    (rotationIndex) => DEVICE_ASSET_MODULES[`../assets/devices/${itemKey}/${itemKey}-r${rotationIndex}.png`] ?? null
+  );
+  const firstAvailableSource = rotationSources.find(Boolean);
+
+  if (!firstAvailableSource) {
+    return null;
+  }
+
+  return rotationSources.map((source) => source ?? firstAvailableSource);
+}
 
 export const ITEM_CATALOG = {
   treadmill: {
@@ -50,7 +73,8 @@ export const ITEM_CATALOG = {
     checkInSeconds: 0,
     popularity: 2,
     initialBreakChance: 0.05,
-    color: '#facc15'
+    color: '#facc15',
+    assetRotations: [dumbbellStationRotation1]
   },
   elliptical: {
     label: 'Elliptical Trainer',
@@ -105,7 +129,8 @@ export const ITEM_CATALOG = {
     checkInSeconds: 0,
     popularity: 3,
     initialBreakChance: 0.08,
-    color: '#f87171'
+    color: '#f87171',
+    assetRotations: [chestPressRotation1]
   },
   latPulldown: {
     label: 'Lat Pulldown',
@@ -138,7 +163,8 @@ export const ITEM_CATALOG = {
     checkInSeconds: 0,
     popularity: 4,
     initialBreakChance: 0.06,
-    color: '#fbbf24'
+    color: '#fbbf24',
+    assetRotations: [barbellRackRotation1]
   },
   powerRack: {
     label: 'Power Rack',
@@ -162,7 +188,8 @@ export const ITEM_CATALOG = {
     checkInSeconds: 0,
     popularity: 4,
     initialBreakChance: 0.05,
-    color: '#d97706'
+    color: '#d97706',
+    assetRotations: [benchPressRotation1]
   },
   kettlebellSet: {
     label: 'Kettlebell Set',
@@ -186,7 +213,8 @@ export const ITEM_CATALOG = {
     checkInSeconds: 0,
     popularity: 4,
     initialBreakChance: 0.04,
-    color: '#10b981'
+    color: '#10b981',
+    assetRotations: [battleRopesRotation1]
   },
   massageChair: {
     label: 'Massage Chair',
@@ -318,6 +346,15 @@ export const ITEM_CATALOG = {
     decorTarget: 'wall'
   }
 };
+
+for (const [itemKey, itemConfig] of Object.entries(ITEM_CATALOG)) {
+  const catalogAssetRotations = getCatalogAssetRotations(itemKey);
+  if (!catalogAssetRotations) {
+    continue;
+  }
+
+  itemConfig.assetRotations = catalogAssetRotations;
+}
 
 export const GYM_UPGRADES = {
   ventilation: {

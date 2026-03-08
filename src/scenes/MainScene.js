@@ -695,11 +695,28 @@ export class MainScene {
   }
 
   getTypeLabel(type) {
-    if (type === 'recovery') return 'Relax';
+    if (type === 'recovery') return 'Relaxing';
     if (type === 'check-in') return 'Check-in';
     if (type === 'weightlifting') return 'Weightlifting';
     if (type === 'decor') return 'Decor';
     return type.charAt(0).toUpperCase() + type.slice(1);
+  }
+
+  getTypeSortPriority(type) {
+    const priorityByType = {
+      cardio: 0,
+      strength: 1,
+      weightlifting: 2,
+      functional: 3,
+      recovery: 4,
+      'check-in': 5,
+      locker: 6,
+      shower: 7,
+      facility: 8,
+      decor: 9
+    };
+
+    return priorityByType[type] ?? Number.MAX_SAFE_INTEGER;
   }
 
   getGymUpgradeEntries() {
@@ -1025,7 +1042,11 @@ export class MainScene {
       }
     }
 
-    return [...types];
+    return [...types].sort((a, b) => {
+      const priorityDiff = this.getTypeSortPriority(a) - this.getTypeSortPriority(b);
+      if (priorityDiff !== 0) return priorityDiff;
+      return this.getTypeLabel(a).localeCompare(this.getTypeLabel(b));
+    });
   }
 
   buildBuyTypeFilters() {
@@ -1050,13 +1071,16 @@ export class MainScene {
     this.buyItemButtons.clear();
     this.ui.buyGrid.innerHTML = '';
 
-    for (const [itemKey, item] of Object.entries(ITEM_CATALOG)) {
-      if (this.getBuyTabForType(item.type) !== this.buyTab) {
-        continue;
-      }
-      if (!this.activeBuyTypes.has(item.type)) {
-        continue;
-      }
+    const visibleItems = Object.entries(ITEM_CATALOG)
+      .filter(([, item]) => this.getBuyTabForType(item.type) === this.buyTab)
+      .filter(([, item]) => this.activeBuyTypes.has(item.type))
+      .sort(([, a], [, b]) => {
+        const priorityDiff = this.getTypeSortPriority(a.type) - this.getTypeSortPriority(b.type);
+        if (priorityDiff !== 0) return priorityDiff;
+        return a.label.localeCompare(b.label);
+      });
+
+    for (const [itemKey, item] of visibleItems) {
 
       const button = document.createElement('button');
       button.type = 'button';
