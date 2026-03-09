@@ -1,12 +1,7 @@
 # Decor Assets
 
-Place decorative object assets in the item folders below.
-Each item folder includes filename conventions and art notes.
+Use one folder per in-game decor item key from `ITEM_CATALOG`.
 
 Items:
-- pottedPlant
-- wallMirror
-- motivationalPoster
-- wallClock
-- receptionRug
-- neonSign
+- floorTilesWood
+- wallpaperWhite

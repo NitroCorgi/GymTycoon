@@ -1,10 +1,7 @@
 # Check-In Assets
 
-Place check-in area object assets in the item folders below.
-Each item folder includes filename conventions and art notes.
+Use one folder per in-game check-in item key from `ITEM_CATALOG`.
 
 Items:
-- frontDesk
-- selfCheckInKiosk
-- turnstileGate
-- queueStanchion
+- receptionDesk
+- turnstile

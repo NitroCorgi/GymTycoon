@@ -1,11 +1,10 @@
 # Facilities Assets
 
-Place facility object assets in the item folders below.
-Each item folder includes filename conventions and art notes.
+Use one folder per in-game facilities-tab item key from `ITEM_CATALOG`.
 
 Items:
-- lockerRow
-- showerStall
-- restroomSign
-- waterFountain
-- towelStation
+- lockerRack2
+- lockerRack4
+- lockerRack6
+- vendingMachine
+- shower
