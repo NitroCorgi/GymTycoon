@@ -20,24 +20,24 @@ export const interactionUiMethods = {
   },
 
   getTopWallPolygon(col, mapLayout) {
-    const wallHeight = mapLayout.tileHeight * 2.9;
+    const wallHeight = this.getWallHeight(mapLayout);
     const topEdge = this.getTopBorderEdge(col, mapLayout);
     return [
-      { x: topEdge.a.x, y: topEdge.a.y },
-      { x: topEdge.b.x, y: topEdge.b.y },
-      { x: topEdge.b.x, y: topEdge.b.y - wallHeight },
-      { x: topEdge.a.x, y: topEdge.a.y - wallHeight }
+      { x: topEdge.a.x + mapLayout.halfTileWidth, y: topEdge.a.y - mapLayout.halfTileHeight },
+      { x: topEdge.b.x + mapLayout.halfTileWidth, y: topEdge.b.y - mapLayout.halfTileHeight },
+      { x: topEdge.b.x + mapLayout.halfTileWidth, y: topEdge.b.y - mapLayout.halfTileHeight - wallHeight },
+      { x: topEdge.a.x + mapLayout.halfTileWidth, y: topEdge.a.y - mapLayout.halfTileHeight - wallHeight }
     ];
   },
 
   getLeftWallPolygon(row, mapLayout) {
-    const wallHeight = mapLayout.tileHeight * 2.9;
+    const wallHeight = this.getWallHeight(mapLayout);
     const leftEdge = this.getLeftBorderEdge(row, mapLayout);
     return [
-      { x: leftEdge.a.x, y: leftEdge.a.y },
-      { x: leftEdge.b.x, y: leftEdge.b.y },
-      { x: leftEdge.b.x, y: leftEdge.b.y - wallHeight },
-      { x: leftEdge.a.x, y: leftEdge.a.y - wallHeight }
+      { x: leftEdge.a.x - mapLayout.halfTileWidth, y: leftEdge.a.y - mapLayout.halfTileHeight },
+      { x: leftEdge.b.x - mapLayout.halfTileWidth, y: leftEdge.b.y - mapLayout.halfTileHeight },
+      { x: leftEdge.b.x - mapLayout.halfTileWidth, y: leftEdge.b.y - mapLayout.halfTileHeight - wallHeight },
+      { x: leftEdge.a.x - mapLayout.halfTileWidth, y: leftEdge.a.y - mapLayout.halfTileHeight - wallHeight }
     ];
   },
 
@@ -220,6 +220,83 @@ export const interactionUiMethods = {
       this.isDraggingMap = false;
       this.lastDragPointer = null;
       this.didDragInCurrentPointer = false;
+    }
+  },
+
+  handleMapZoom(game) {
+    const wheelDeltaY = game.input.getWheelDeltaY();
+    if (!Number.isFinite(wheelDeltaY) || wheelDeltaY === 0) {
+      return;
+    }
+
+    const pointer = game.input.getPointerPosition();
+    if (!this.isPointerOnCanvas(game, pointer)) {
+      return;
+    }
+
+    const zoomDirection = wheelDeltaY < 0 ? 1 : -1;
+    const nextZoom = Math.max(
+      this.mapZoomMin,
+      Math.min(this.mapZoomMax, this.mapZoom + this.mapZoomStep * zoomDirection)
+    );
+
+    if (nextZoom === this.mapZoom) {
+      return;
+    }
+
+    const previousMapLayout = this.getMapLayout(game.canvas.width, game.canvas.height);
+    this.mapZoom = nextZoom;
+    const nextMapLayout = this.getMapLayout(game.canvas.width, game.canvas.height);
+
+    this.reprojectPeopleForMapLayout(previousMapLayout, nextMapLayout);
+
+    if (this.lastMapLayout) {
+      this.lastMapLayout = nextMapLayout;
+    }
+  },
+
+  screenPointToMapCoordinates(pointX, pointY, mapLayout) {
+    const normalizedX = (pointX - mapLayout.originX) / (mapLayout.tileWidth / 2);
+    const normalizedY = (pointY - mapLayout.originY) / (mapLayout.tileHeight / 2);
+    return {
+      row: (normalizedY - normalizedX) / 2,
+      col: (normalizedY + normalizedX) / 2
+    };
+  },
+
+  reprojectPointForMapLayout(point, previousMapLayout, nextMapLayout) {
+    if (!point) {
+      return point;
+    }
+
+    const mapCoordinates = this.screenPointToMapCoordinates(point.x, point.y, previousMapLayout);
+    return this.tileToScreen(mapCoordinates.row, mapCoordinates.col, nextMapLayout);
+  },
+
+  reprojectPeopleForMapLayout(previousMapLayout, nextMapLayout) {
+    if (!previousMapLayout || !nextMapLayout) {
+      return;
+    }
+
+    for (const person of this.people) {
+      const projectedPosition = this.reprojectPointForMapLayout(person, previousMapLayout, nextMapLayout);
+      if (projectedPosition) {
+        person.x = projectedPosition.x;
+        person.y = projectedPosition.y;
+      }
+
+      if (typeof person.targetX === 'number' && typeof person.targetY === 'number') {
+        const projectedTarget = this.reprojectPointForMapLayout(
+          { x: person.targetX, y: person.targetY },
+          previousMapLayout,
+          nextMapLayout
+        );
+
+        if (projectedTarget) {
+          person.targetX = projectedTarget.x;
+          person.targetY = projectedTarget.y;
+        }
+      }
     }
   },
 

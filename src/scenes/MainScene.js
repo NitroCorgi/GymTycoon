@@ -184,6 +184,10 @@ export class MainScene {
     this.hoveredWallSegment = null;
     this.mapOffsetX = 0;
     this.mapOffsetY = 0;
+    this.mapZoom = 1;
+    this.mapZoomMin = 0.6;
+    this.mapZoomMax = 2;
+    this.mapZoomStep = 0.1;
     this.isDraggingMap = false;
     this.lastDragPointer = null;
     this.didDragInCurrentPointer = false;
@@ -1115,6 +1119,7 @@ export class MainScene {
   update(deltaSeconds, game) {
     if (this.isGameOver) return;
 
+    this.handleMapZoom(game);
     this.handleMapDrag(game);
     const mapLayout = this.getMapLayout(game.canvas.width, game.canvas.height);
     this.lastMapLayout = mapLayout;

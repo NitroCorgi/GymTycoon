@@ -11,15 +11,50 @@ import chestPressRotation1 from '../assets/devices/chestPress/chestPress-r1.png'
 import barbellRackRotation1 from '../assets/devices/barbellRack/barbellRack-r1.png';
 import benchPressRotation1 from '../assets/devices/benchPress/benchPress-r1.png';
 import battleRopesRotation1 from '../assets/devices/battleRopes/battleRopes-r1.png';
+import sidewalkTileSprite from '../assets/components/sidewalk.png';
+import streetTileSprite from '../assets/components/street.png';
 
 const DEVICE_ASSET_MODULES = import.meta.glob('../assets/devices/*/*-r[0-3].png', {
   eager: true,
   import: 'default'
 });
 
-function getCatalogAssetRotations(itemKey) {
+const CHECK_IN_ASSET_MODULES = import.meta.glob('../assets/checkIn/*/*-r[0-3].png', {
+  eager: true,
+  import: 'default'
+});
+
+const FACILITIES_ASSET_MODULES = import.meta.glob('../assets/facilities/*/*-r[0-3].png', {
+  eager: true,
+  import: 'default'
+});
+
+const DECOR_ASSET_MODULES = import.meta.glob('../assets/decor/*/*-r[0-3].png', {
+  eager: true,
+  import: 'default'
+});
+
+function getAssetCategoryFolder(itemType) {
+  if (itemType === 'check-in') return 'checkIn';
+  if (itemType === 'locker' || itemType === 'shower' || itemType === 'facility') return 'facilities';
+  if (itemType === 'decor') return 'decor';
+  return 'devices';
+}
+
+function getAssetModulesByCategory(categoryFolder) {
+  if (categoryFolder === 'checkIn') return CHECK_IN_ASSET_MODULES;
+  if (categoryFolder === 'facilities') return FACILITIES_ASSET_MODULES;
+  if (categoryFolder === 'decor') return DECOR_ASSET_MODULES;
+  return DEVICE_ASSET_MODULES;
+}
+
+function getCatalogAssetRotations(itemKey, itemType) {
+  const categoryFolder = getAssetCategoryFolder(itemType);
+  const assetModules = getAssetModulesByCategory(categoryFolder);
+
   const rotationSources = [0, 1, 2, 3].map(
-    (rotationIndex) => DEVICE_ASSET_MODULES[`../assets/devices/${itemKey}/${itemKey}-r${rotationIndex}.png`] ?? null
+    (rotationIndex) =>
+      assetModules[`../assets/${categoryFolder}/${itemKey}/${itemKey}-r${rotationIndex}.png`] ?? null
   );
   const firstAvailableSource = rotationSources.find(Boolean);
 
@@ -348,7 +383,7 @@ export const ITEM_CATALOG = {
 };
 
 for (const [itemKey, itemConfig] of Object.entries(ITEM_CATALOG)) {
-  const catalogAssetRotations = getCatalogAssetRotations(itemKey);
+  const catalogAssetRotations = getCatalogAssetRotations(itemKey, itemConfig.type);
   if (!catalogAssetRotations) {
     continue;
   }
@@ -573,11 +608,11 @@ export const EXTERIOR_MAP_STYLE = {
   ],
   tileTypes: {
     sidewalk: {
-      assetPath: '/assets/tiles/sidewalk/sidewalk-tile.png',
+      assetPath: sidewalkTileSprite,
       fallbackColor: '#d1d5db'
     },
     street: {
-      assetPath: '/assets/tiles/street/street-tile.png',
+      assetPath: streetTileSprite,
       fallbackColor: '#374151'
     }
   }

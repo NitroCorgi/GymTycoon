@@ -6,6 +6,7 @@ export class Input {
     this.pointerPressed = false;
     this.pointerReleased = false;
     this.pointerDown = false;
+    this.wheelDeltaY = 0;
 
     window.addEventListener('keydown', (event) => {
       if (!this.keysDown.has(event.code)) {
@@ -54,6 +55,22 @@ export class Input {
       this.pointerReleased = true;
       this.pointerDown = false;
     });
+
+    window.addEventListener(
+      'wheel',
+      (event) => {
+        this.pointerPosition = {
+          x: event.clientX,
+          y: event.clientY
+        };
+        this.wheelDeltaY += event.deltaY;
+
+        if (event.target instanceof HTMLCanvasElement) {
+          event.preventDefault();
+        }
+      },
+      { passive: false }
+    );
   }
 
   isDown(code) {
@@ -80,9 +97,14 @@ export class Input {
     return this.pointerDown;
   }
 
+  getWheelDeltaY() {
+    return this.wheelDeltaY;
+  }
+
   endFrame() {
     this.keysPressed.clear();
     this.pointerPressed = false;
     this.pointerReleased = false;
+    this.wheelDeltaY = 0;
   }
 }

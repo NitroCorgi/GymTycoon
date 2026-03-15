@@ -1,5 +1,8 @@
 import { drawText } from '../../ui/drawText.js';
 import { EXTERIOR_MAP_STYLE, getItemUsageSeconds, ITEM_CATALOG, REPAIR_SECONDS } from '../mainSceneConfig.js';
+import defaultFloorTileAsset from '../../assets/components/floor_default.png';
+import wallLeftAsset from '../../assets/components/wall_left.png';
+import wallRightAsset from '../../assets/components/wall_right.png';
 
 export const layoutRenderMethods = {
   getExteriorBandRanges() {
@@ -68,11 +71,14 @@ export const layoutRenderMethods = {
     return null;
   },
 
-  drawExteriorTile(context, center, mapLayout, tileType, variationIndex) {
+  drawExteriorTile(context, row, outsideDistance, mapLayout, tileType, variationIndex) {
     const tileStyle = EXTERIOR_MAP_STYLE.tileTypes?.[tileType] ?? {};
     const fallbackColor = tileStyle.fallbackColor ?? '#9ca3af';
     const image = this.getAssetImage(tileStyle.assetPath);
     const hasDrawableImage = image?.complete && image.naturalWidth > 0 && image.naturalHeight > 0;
+    const tileX = -outsideDistance;
+    const tileY = row;
+    const center = this.tileToScreen(row, tileX, mapLayout);
 
     context.beginPath();
     context.moveTo(center.x, center.y - mapLayout.tileHeight / 2);
@@ -82,25 +88,12 @@ export const layoutRenderMethods = {
     context.closePath();
 
     if (hasDrawableImage) {
-      context.save();
-      context.clip();
-      context.imageSmoothingEnabled = true;
-      context.drawImage(
-        image,
-        center.x - mapLayout.tileWidth / 2,
-        center.y - mapLayout.tileHeight / 2,
-        mapLayout.tileWidth,
-        mapLayout.tileHeight
-      );
-      context.restore();
+      this.drawIsoGroundSprite(context, image, tileX, tileY, mapLayout);
     } else {
       const fallbackShade = variationIndex % 2 === 0 ? fallbackColor : this.tintHex(fallbackColor, -8);
       context.fillStyle = fallbackShade;
       context.fill();
     }
-
-    context.strokeStyle = '#0f172a';
-    context.stroke();
   },
 
   drawExteriorGround(context, mapLayout) {
@@ -114,6 +107,8 @@ export const layoutRenderMethods = {
       return;
     }
 
+    const exteriorTiles = [];
+
     for (let row = startRow; row <= endRow; row += 1) {
       for (let outsideDistance = totalBandWidth; outsideDistance >= 1; outsideDistance -= 1) {
         const tileType = this.getExteriorTileType(outsideDistance);
@@ -121,32 +116,106 @@ export const layoutRenderMethods = {
           continue;
         }
 
-        const center = this.getExteriorTileCenter(row, outsideDistance, mapLayout);
-        this.drawExteriorTile(context, center, mapLayout, tileType, row + outsideDistance);
+        exteriorTiles.push({
+          row,
+          outsideDistance,
+          tileType,
+          depth: row - outsideDistance
+        });
       }
+    }
+
+    exteriorTiles.sort((left, right) => {
+      if (left.depth !== right.depth) {
+        return left.depth - right.depth;
+      }
+      return left.row - right.row;
+    });
+
+    for (const tile of exteriorTiles) {
+      this.drawExteriorTile(
+        context,
+        tile.row,
+        tile.outsideDistance,
+        mapLayout,
+        tile.tileType,
+        tile.row + tile.outsideDistance
+      );
     }
   },
 
   getMapLayout(canvasWidth, canvasHeight) {
-    const padding = 0;
-    const availableWidth = Math.max(220, canvasWidth - padding * 2);
-    const availableHeight = Math.max(180, canvasHeight - padding * 2);
+    const zoom = this.mapZoom ?? 1;
+    const halfTileWidth = Math.max(1, Math.round(32 * zoom));
+    const halfTileHeight = Math.max(1, Math.round(16 * zoom));
+    const tileWidth = halfTileWidth * 2;
+    const tileHeight = halfTileHeight * 2;
 
-    const tileWidthByWidth = availableWidth / (this.mapCols + this.mapRows);
-    const tileWidthByHeight = (availableHeight * 2) / (this.mapCols + this.mapRows);
-    const tileWidth = Math.floor(Math.min(tileWidthByWidth, tileWidthByHeight));
-    const tileHeight = tileWidth / 2;
+    const wallSpriteWidth = Math.max(1, Math.round(32 * zoom));
+    const wallSpriteHeight = Math.max(1, Math.round(96 * zoom));
 
-    const mapHeight = ((this.mapCols + this.mapRows) * tileHeight) / 2;
-    const originX = canvasWidth / 2 + this.mapOffsetX;
-    const originY = (canvasHeight - mapHeight) / 2 + tileHeight + this.mapOffsetY;
+    const mapWidth = (this.mapCols + this.mapRows) * halfTileWidth;
+    const mapHeight = (this.mapCols + this.mapRows) * halfTileHeight;
+    const mapMinX = (canvasWidth - mapWidth) / 2 + this.mapOffsetX;
+    const originX = Math.round(mapMinX + (this.mapRows - 1) * halfTileWidth);
+    const originY = Math.round((canvasHeight - mapHeight) / 2 + this.mapOffsetY);
 
     return {
       tileWidth,
       tileHeight,
+      halfTileWidth,
+      halfTileHeight,
+      wallSpriteWidth,
+      wallSpriteHeight,
+      mapWidth,
+      mapHeight,
       originX,
       originY
     };
+  },
+
+  getWallHeight(mapLayout) {
+    return Math.max(1, mapLayout.wallSpriteHeight - mapLayout.tileHeight);
+  },
+
+  gridToScreen(tileX, tileY, mapLayout) {
+    return {
+      x: (tileX - tileY) * mapLayout.halfTileWidth + mapLayout.originX,
+      y: (tileX + tileY) * mapLayout.halfTileHeight + mapLayout.originY
+    };
+  },
+
+  drawIsoGroundSprite(context, image, tileX, tileY, mapLayout) {
+    const screen = this.gridToScreen(tileX, tileY, mapLayout);
+    context.save();
+    context.imageSmoothingEnabled = false;
+    context.drawImage(image, Math.round(screen.x), Math.round(screen.y), mapLayout.tileWidth, mapLayout.tileHeight);
+    context.restore();
+  },
+
+  drawIsoAnchoredSprite(
+    context,
+    image,
+    tileX,
+    tileY,
+    mapLayout,
+    { anchorX, anchorY, baseOffsetX, baseOffsetY, drawWidth, drawHeight }
+  ) {
+    const screen = this.gridToScreen(tileX, tileY, mapLayout);
+    const resolvedBaseOffsetX = baseOffsetX ?? mapLayout.tileWidth / 2;
+    const resolvedBaseOffsetY = baseOffsetY ?? mapLayout.tileHeight;
+    const resolvedDrawWidth = drawWidth ?? image.naturalWidth;
+    const resolvedDrawHeight = drawHeight ?? image.naturalHeight;
+    const resolvedAnchorX = anchorX ?? resolvedDrawWidth / 2;
+    const resolvedAnchorY = anchorY ?? resolvedDrawHeight;
+
+    const drawX = Math.round(screen.x + resolvedBaseOffsetX - resolvedAnchorX);
+    const drawY = Math.round(screen.y + resolvedBaseOffsetY - resolvedAnchorY);
+
+    context.save();
+    context.imageSmoothingEnabled = false;
+    context.drawImage(image, drawX, drawY, resolvedDrawWidth, resolvedDrawHeight);
+    context.restore();
   },
 
   getMonthlyCosts() {
@@ -174,9 +243,11 @@ export const layoutRenderMethods = {
   },
 
   tileToScreen(row, col, mapLayout) {
-    const x = mapLayout.originX + (col - row) * (mapLayout.tileWidth / 2);
-    const y = mapLayout.originY + (col + row) * (mapLayout.tileHeight / 2);
-    return { x, y };
+    const topLeft = this.gridToScreen(col, row, mapLayout);
+    return {
+      x: topLeft.x + mapLayout.halfTileWidth,
+      y: topLeft.y + mapLayout.halfTileHeight
+    };
   },
 
   getDeviceAnchor(item, mapLayout) {
@@ -214,6 +285,94 @@ export const layoutRenderMethods = {
     image.src = assetSource;
     this.assetImageCache.set(assetSource, image);
     return image;
+  },
+
+  getWallTintedSprite(assetSource, tintHex) {
+    const sourceImage = this.getAssetImage(assetSource);
+    if (!sourceImage?.complete || sourceImage.naturalWidth <= 0 || sourceImage.naturalHeight <= 0) {
+      return null;
+    }
+
+    const normalizedTintHex = typeof tintHex === 'string' && /^#[0-9a-fA-F]{6}$/.test(tintHex) ? tintHex : '#6ea0ff';
+    const [targetRed, targetGreen, targetBlue] = this.hexToRgb(normalizedTintHex);
+
+    if (!this.wallTintedSpriteCache) {
+      this.wallTintedSpriteCache = new Map();
+    }
+
+    const cacheKey = `${assetSource}|${normalizedTintHex.toLowerCase()}`;
+    const cachedCanvas = this.wallTintedSpriteCache.get(cacheKey);
+    if (cachedCanvas) {
+      return cachedCanvas;
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = sourceImage.naturalWidth;
+    canvas.height = sourceImage.naturalHeight;
+
+    const canvasContext = canvas.getContext('2d');
+    if (!canvasContext) {
+      return sourceImage;
+    }
+
+    canvasContext.drawImage(sourceImage, 0, 0);
+    const imageData = canvasContext.getImageData(0, 0, canvas.width, canvas.height);
+
+    for (let index = 0; index < imageData.data.length; index += 4) {
+      const red = imageData.data[index];
+      const green = imageData.data[index + 1];
+      const blue = imageData.data[index + 2];
+      const alpha = imageData.data[index + 3];
+
+      if (alpha > 0 && red === 255 && green === 255 && blue === 255) {
+        imageData.data[index] = targetRed;
+        imageData.data[index + 1] = targetGreen;
+        imageData.data[index + 2] = targetBlue;
+      }
+    }
+
+    canvasContext.putImageData(imageData, 0, 0);
+    this.wallTintedSpriteCache.set(cacheKey, canvas);
+    return canvas;
+  },
+
+  hexToRgb(hex) {
+    const safeHex = typeof hex === 'string' && /^#[0-9a-fA-F]{6}$/.test(hex) ? hex : '#6ea0ff';
+    const numericHex = Number.parseInt(safeHex.slice(1), 16);
+    return [(numericHex >> 16) & 255, (numericHex >> 8) & 255, numericHex & 255];
+  },
+
+  drawWallFaceSprite(context, polygon, assetSource, tintColor, fallbackColor = '#111827') {
+    context.beginPath();
+    context.moveTo(polygon[0].x, polygon[0].y);
+    context.lineTo(polygon[1].x, polygon[1].y);
+    context.lineTo(polygon[2].x, polygon[2].y);
+    context.lineTo(polygon[3].x, polygon[3].y);
+    context.closePath();
+
+    const tintedSprite = this.getWallTintedSprite(assetSource, tintColor);
+    const hasDrawableSprite = tintedSprite && tintedSprite.width > 0 && tintedSprite.height > 0;
+
+    if (!hasDrawableSprite) {
+      context.fillStyle = fallbackColor;
+      context.fill();
+      return;
+    }
+
+    const minX = Math.min(polygon[0].x, polygon[1].x, polygon[2].x, polygon[3].x);
+    const maxX = Math.max(polygon[0].x, polygon[1].x, polygon[2].x, polygon[3].x);
+    const minY = Math.min(polygon[0].y, polygon[1].y, polygon[2].y, polygon[3].y);
+    const maxY = Math.max(polygon[0].y, polygon[1].y, polygon[2].y, polygon[3].y);
+    const drawX = Math.floor(minX) - 1;
+    const drawY = Math.floor(minY) - 1;
+    const drawWidth = Math.ceil(maxX) - Math.floor(minX) + 2;
+    const drawHeight = Math.ceil(maxY) - Math.floor(minY) + 2;
+
+    context.save();
+    context.clip();
+    context.imageSmoothingEnabled = false;
+    context.drawImage(tintedSprite, drawX, drawY, drawWidth, drawHeight);
+    context.restore();
   },
 
   drawItemAssetSprite(context, item, mapLayout, center, footprint) {
@@ -388,8 +547,12 @@ export const layoutRenderMethods = {
       );
     }
 
-    for (let row = 0; row < this.mapRows; row += 1) {
-      for (let col = 0; col < this.mapCols; col += 1) {
+    for (let depth = 0; depth <= this.mapRows + this.mapCols - 2; depth += 1) {
+      const rowStart = Math.max(0, depth - (this.mapCols - 1));
+      const rowEnd = Math.min(this.mapRows - 1, depth);
+
+      for (let row = rowStart; row <= rowEnd; row += 1) {
+        const col = depth - row;
         if (!this.isTileAvailable(row, col)) {
           continue;
         }
@@ -412,18 +575,42 @@ export const layoutRenderMethods = {
 
         if (isEntrance) {
           context.fillStyle = '#166534';
+          context.fill();
         } else if (isPlacementTile) {
           context.fillStyle = placementValid ? '#14532d' : '#7f1d1d';
+          context.fill();
         } else {
           const floorDecorKey = this.floorDecorTiles?.[row]?.[col];
           const hasWoodFloor = ITEM_CATALOG[floorDecorKey]?.decorTarget === 'floor';
-          const floorColor = hasWoodFloor ? ((row + col) % 2 === 0 ? '#7c4a20' : '#6b3f1b') : (row + col) % 2 === 0 ? '#1f2937' : '#17202f';
-          context.fillStyle = hovered ? '#334155' : floorColor;
-        }
-        context.fill();
+          const defaultFloorImage = this.getAssetImage(defaultFloorTileAsset);
+          const hasDefaultFloorSprite =
+            defaultFloorImage?.complete && defaultFloorImage.naturalWidth > 0 && defaultFloorImage.naturalHeight > 0;
 
-        context.strokeStyle = '#0f172a';
-        context.stroke();
+          if (!hasWoodFloor && hasDefaultFloorSprite) {
+            this.drawIsoGroundSprite(context, defaultFloorImage, col, row, mapLayout);
+
+            if (hovered) {
+              context.beginPath();
+              context.moveTo(center.x, center.y - mapLayout.tileHeight / 2);
+              context.lineTo(center.x + mapLayout.tileWidth / 2, center.y);
+              context.lineTo(center.x, center.y + mapLayout.tileHeight / 2);
+              context.lineTo(center.x - mapLayout.tileWidth / 2, center.y);
+              context.closePath();
+              context.fillStyle = 'rgb(51 65 85 / 45%)';
+              context.fill();
+            }
+          } else {
+            const floorColor = hasWoodFloor
+              ? (row + col) % 2 === 0
+                ? '#7c4a20'
+                : '#6b3f1b'
+              : (row + col) % 2 === 0
+                ? '#1f2937'
+                : '#17202f';
+            context.fillStyle = hovered ? '#334155' : floorColor;
+            context.fill();
+          }
+        }
 
         if (isSelectedFloorDecor) {
           context.strokeStyle = '#f8fafc';
@@ -438,28 +625,36 @@ export const layoutRenderMethods = {
 
   drawEntranceWall(context, mapLayout) {
     const doorEdge = this.getLeftBorderEdge(this.entranceTile.row, mapLayout);
-    const wallHeight = mapLayout.tileHeight * 2.9;
-    const stripeHeight = Math.max(2, mapLayout.tileHeight * 0.14);
+    const wallHeight = this.getWallHeight(mapLayout);
+    const primaryColor =
+      typeof this.gymMainColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(this.gymMainColor)
+        ? this.gymMainColor
+        : '#6ea0ff';
 
-    context.fillStyle = '#0f2d1a';
-    context.beginPath();
-    context.moveTo(doorEdge.a.x, doorEdge.a.y);
-    context.lineTo(doorEdge.b.x, doorEdge.b.y);
-    context.lineTo(doorEdge.b.x, doorEdge.b.y - wallHeight);
-    context.lineTo(doorEdge.a.x, doorEdge.a.y - wallHeight);
-    context.closePath();
-    context.fill();
-    this.drawWallTopStripe(context, doorEdge, wallHeight, stripeHeight);
-
-    context.strokeStyle = '#86efac';
-    context.stroke();
+    const entranceWallSprite = this.getWallTintedSprite(wallLeftAsset, primaryColor);
+    if (entranceWallSprite) {
+      this.drawIsoAnchoredSprite(context, entranceWallSprite, -1, this.entranceTile.row, mapLayout, {
+        anchorX: 0,
+        anchorY: mapLayout.wallSpriteHeight,
+        baseOffsetX: mapLayout.tileWidth / 2,
+        baseOffsetY: mapLayout.tileHeight,
+        drawWidth: mapLayout.wallSpriteWidth,
+        drawHeight: mapLayout.wallSpriteHeight
+      });
+    }
 
     context.fillStyle = '#0b131f';
     context.beginPath();
-    context.moveTo(doorEdge.a.x, doorEdge.a.y);
-    context.lineTo(doorEdge.b.x, doorEdge.b.y);
-    context.lineTo(doorEdge.b.x, doorEdge.b.y - wallHeight * 0.72);
-    context.lineTo(doorEdge.a.x, doorEdge.a.y - wallHeight * 0.72);
+    context.moveTo(doorEdge.a.x - mapLayout.halfTileWidth, doorEdge.a.y - mapLayout.halfTileHeight);
+    context.lineTo(doorEdge.b.x - mapLayout.halfTileWidth, doorEdge.b.y - mapLayout.halfTileHeight);
+    context.lineTo(
+      doorEdge.b.x - mapLayout.halfTileWidth,
+      doorEdge.b.y - mapLayout.halfTileHeight - wallHeight * 0.72
+    );
+    context.lineTo(
+      doorEdge.a.x - mapLayout.halfTileWidth,
+      doorEdge.a.y - mapLayout.halfTileHeight - wallHeight * 0.72
+    );
     context.closePath();
     context.fill();
   },
@@ -490,38 +685,51 @@ export const layoutRenderMethods = {
   },
 
   drawSideWalls(context, mapLayout) {
-    const wallHeight = mapLayout.tileHeight * 2.9;
-    const stripeHeight = Math.max(2, mapLayout.tileHeight * 0.14);
+    const wallHeight = this.getWallHeight(mapLayout);
+    const primaryColor =
+      typeof this.gymMainColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(this.gymMainColor)
+        ? this.gymMainColor
+        : '#6ea0ff';
+
+    const wallSegments = [];
 
     for (let col = 0; col < this.mapCols; col += 1) {
       if (!this.isTileAvailable(0, col)) {
         continue;
       }
 
-      const topEdge = this.getTopBorderEdge(col, mapLayout);
-
-      context.beginPath();
-      context.moveTo(topEdge.a.x, topEdge.a.y);
-      context.lineTo(topEdge.b.x, topEdge.b.y);
-      context.lineTo(topEdge.b.x, topEdge.b.y - wallHeight);
-      context.lineTo(topEdge.a.x, topEdge.a.y - wallHeight);
-      context.closePath();
-
       const wallpaperKey = this.wallpaperTopByCol?.[col];
       const hasWallpaper = ITEM_CATALOG[wallpaperKey]?.decorTarget === 'wall';
-      context.fillStyle = hasWallpaper ? '#f3f4f6' : '#111827';
-      context.fill();
-      this.drawWallTopStripe(context, topEdge, wallHeight, stripeHeight);
+      const tintColor = hasWallpaper ? '#FFFFFF' : primaryColor;
+
+      wallSegments.push({
+        tileX: col,
+        tileY: -1,
+        side: 'top',
+        index: col,
+        tintColor,
+        assetSource: wallRightAsset
+      });
 
       if (this.selectedDecor?.decorTarget === 'wall' && this.selectedDecor?.side === 'top' && this.selectedDecor?.col === col) {
+        const topEdge = this.getTopBorderEdge(col, mapLayout);
+        context.beginPath();
+        context.moveTo(topEdge.a.x + mapLayout.halfTileWidth, topEdge.a.y - mapLayout.halfTileHeight);
+        context.lineTo(topEdge.b.x + mapLayout.halfTileWidth, topEdge.b.y - mapLayout.halfTileHeight);
+        context.lineTo(
+          topEdge.b.x + mapLayout.halfTileWidth,
+          topEdge.b.y - mapLayout.halfTileHeight - wallHeight
+        );
+        context.lineTo(
+          topEdge.a.x + mapLayout.halfTileWidth,
+          topEdge.a.y - mapLayout.halfTileHeight - wallHeight
+        );
+        context.closePath();
         context.strokeStyle = '#f8fafc';
         context.lineWidth = 2;
         context.stroke();
         context.lineWidth = 1;
       }
-
-      context.strokeStyle = '#0b1220';
-      context.stroke();
     }
 
     for (let row = 0; row < this.mapRows; row += 1) {
@@ -532,30 +740,63 @@ export const layoutRenderMethods = {
         continue;
       }
 
-      const leftEdge = this.getLeftBorderEdge(row, mapLayout);
-
-      context.beginPath();
-      context.moveTo(leftEdge.a.x, leftEdge.a.y);
-      context.lineTo(leftEdge.b.x, leftEdge.b.y);
-      context.lineTo(leftEdge.b.x, leftEdge.b.y - wallHeight);
-      context.lineTo(leftEdge.a.x, leftEdge.a.y - wallHeight);
-      context.closePath();
-
       const wallpaperKey = this.wallpaperLeftByRow?.[row];
       const hasWallpaper = ITEM_CATALOG[wallpaperKey]?.decorTarget === 'wall';
-      context.fillStyle = hasWallpaper ? '#e5e7eb' : '#0f172a';
-      context.fill();
-      this.drawWallTopStripe(context, leftEdge, wallHeight, stripeHeight);
+      const tintColor = hasWallpaper ? '#FFFFFF' : primaryColor;
+
+      wallSegments.push({
+        tileX: -1,
+        tileY: row,
+        side: 'left',
+        index: row,
+        tintColor,
+        assetSource: wallLeftAsset
+      });
 
       if (this.selectedDecor?.decorTarget === 'wall' && this.selectedDecor?.side === 'left' && this.selectedDecor?.row === row) {
+        const leftEdge = this.getLeftBorderEdge(row, mapLayout);
+        context.beginPath();
+        context.moveTo(leftEdge.a.x - mapLayout.halfTileWidth, leftEdge.a.y - mapLayout.halfTileHeight);
+        context.lineTo(leftEdge.b.x - mapLayout.halfTileWidth, leftEdge.b.y - mapLayout.halfTileHeight);
+        context.lineTo(
+          leftEdge.b.x - mapLayout.halfTileWidth,
+          leftEdge.b.y - mapLayout.halfTileHeight - wallHeight
+        );
+        context.lineTo(
+          leftEdge.a.x - mapLayout.halfTileWidth,
+          leftEdge.a.y - mapLayout.halfTileHeight - wallHeight
+        );
+        context.closePath();
         context.strokeStyle = '#f8fafc';
         context.lineWidth = 2;
         context.stroke();
         context.lineWidth = 1;
       }
+    }
 
-      context.strokeStyle = '#0b1220';
-      context.stroke();
+    wallSegments.sort((left, right) => {
+      const leftDepth = left.tileX + left.tileY;
+      const rightDepth = right.tileX + right.tileY;
+      if (leftDepth !== rightDepth) {
+        return leftDepth - rightDepth;
+      }
+      return left.tileX - right.tileX;
+    });
+
+    for (const segment of wallSegments) {
+      const wallSprite = this.getWallTintedSprite(segment.assetSource, segment.tintColor);
+      if (!wallSprite) {
+        continue;
+      }
+
+      this.drawIsoAnchoredSprite(context, wallSprite, segment.tileX, segment.tileY, mapLayout, {
+        anchorX: segment.side === 'left' ? 0 : mapLayout.wallSpriteWidth,
+        anchorY: mapLayout.wallSpriteHeight,
+        baseOffsetX: mapLayout.tileWidth / 2,
+        baseOffsetY: mapLayout.tileHeight,
+        drawWidth: mapLayout.wallSpriteWidth,
+        drawHeight: mapLayout.wallSpriteHeight
+      });
     }
   },
 
@@ -622,7 +863,7 @@ export const layoutRenderMethods = {
         this.selectedItemKey,
         this.currentPlacementRotation
       );
-      const wallHeight = mapLayout.tileHeight * 2.9;
+      const wallHeight = this.getWallHeight(mapLayout);
 
       context.save();
       context.globalAlpha = canPlace ? 0.6 : 0.35;
@@ -630,10 +871,16 @@ export const layoutRenderMethods = {
       if (wallTarget.side === 'top') {
         const topEdge = this.getTopBorderEdge(wallTarget.col, mapLayout);
         context.beginPath();
-        context.moveTo(topEdge.a.x, topEdge.a.y);
-        context.lineTo(topEdge.b.x, topEdge.b.y);
-        context.lineTo(topEdge.b.x, topEdge.b.y - wallHeight);
-        context.lineTo(topEdge.a.x, topEdge.a.y - wallHeight);
+        context.moveTo(topEdge.a.x + mapLayout.halfTileWidth, topEdge.a.y - mapLayout.halfTileHeight);
+        context.lineTo(topEdge.b.x + mapLayout.halfTileWidth, topEdge.b.y - mapLayout.halfTileHeight);
+        context.lineTo(
+          topEdge.b.x + mapLayout.halfTileWidth,
+          topEdge.b.y - mapLayout.halfTileHeight - wallHeight
+        );
+        context.lineTo(
+          topEdge.a.x + mapLayout.halfTileWidth,
+          topEdge.a.y - mapLayout.halfTileHeight - wallHeight
+        );
         context.closePath();
         context.fillStyle = canPlace ? '#f8fafc' : '#7f1d1d';
         context.fill();
@@ -642,10 +889,16 @@ export const layoutRenderMethods = {
       if (wallTarget.side === 'left') {
         const leftEdge = this.getLeftBorderEdge(wallTarget.row, mapLayout);
         context.beginPath();
-        context.moveTo(leftEdge.a.x, leftEdge.a.y);
-        context.lineTo(leftEdge.b.x, leftEdge.b.y);
-        context.lineTo(leftEdge.b.x, leftEdge.b.y - wallHeight);
-        context.lineTo(leftEdge.a.x, leftEdge.a.y - wallHeight);
+        context.moveTo(leftEdge.a.x - mapLayout.halfTileWidth, leftEdge.a.y - mapLayout.halfTileHeight);
+        context.lineTo(leftEdge.b.x - mapLayout.halfTileWidth, leftEdge.b.y - mapLayout.halfTileHeight);
+        context.lineTo(
+          leftEdge.b.x - mapLayout.halfTileWidth,
+          leftEdge.b.y - mapLayout.halfTileHeight - wallHeight
+        );
+        context.lineTo(
+          leftEdge.a.x - mapLayout.halfTileWidth,
+          leftEdge.a.y - mapLayout.halfTileHeight - wallHeight
+        );
         context.closePath();
         context.fillStyle = canPlace ? '#f8fafc' : '#7f1d1d';
         context.fill();
