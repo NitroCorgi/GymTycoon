@@ -256,8 +256,10 @@ export const interactionUiMethods = {
   },
 
   screenPointToMapCoordinates(pointX, pointY, mapLayout) {
-    const normalizedX = (pointX - mapLayout.originX) / (mapLayout.tileWidth / 2);
-    const normalizedY = (pointY - mapLayout.originY) / (mapLayout.tileHeight / 2);
+    const halfTileWidth = mapLayout.halfTileWidth ?? mapLayout.tileWidth / 2;
+    const halfTileHeight = mapLayout.halfTileHeight ?? mapLayout.tileHeight / 2;
+    const normalizedX = (pointX - (mapLayout.originX + halfTileWidth)) / halfTileWidth;
+    const normalizedY = (pointY - (mapLayout.originY + halfTileHeight)) / halfTileHeight;
     return {
       row: (normalizedY - normalizedX) / 2,
       col: (normalizedY + normalizedX) / 2

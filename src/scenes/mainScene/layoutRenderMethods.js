@@ -2,6 +2,7 @@ import { drawText } from '../../ui/drawText.js';
 import { EXTERIOR_MAP_STYLE, getItemUsageSeconds, ITEM_CATALOG, REPAIR_SECONDS } from '../mainSceneConfig.js';
 import defaultFloorTileAsset from '../../assets/components/floor_default.png';
 import wallLeftAsset from '../../assets/components/wall_left.png';
+import wallLeftEntranceAsset from '../../assets/components/wall_left_entrance.png';
 import wallRightAsset from '../../assets/components/wall_right.png';
 
 export const layoutRenderMethods = {
@@ -624,14 +625,12 @@ export const layoutRenderMethods = {
   },
 
   drawEntranceWall(context, mapLayout) {
-    const doorEdge = this.getLeftBorderEdge(this.entranceTile.row, mapLayout);
-    const wallHeight = this.getWallHeight(mapLayout);
     const primaryColor =
       typeof this.gymMainColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(this.gymMainColor)
         ? this.gymMainColor
         : '#6ea0ff';
 
-    const entranceWallSprite = this.getWallTintedSprite(wallLeftAsset, primaryColor);
+    const entranceWallSprite = this.getWallTintedSprite(wallLeftEntranceAsset, primaryColor);
     if (entranceWallSprite) {
       this.drawIsoAnchoredSprite(context, entranceWallSprite, -1, this.entranceTile.row, mapLayout, {
         anchorX: 0,
@@ -642,21 +641,6 @@ export const layoutRenderMethods = {
         drawHeight: mapLayout.wallSpriteHeight
       });
     }
-
-    context.fillStyle = '#0b131f';
-    context.beginPath();
-    context.moveTo(doorEdge.a.x - mapLayout.halfTileWidth, doorEdge.a.y - mapLayout.halfTileHeight);
-    context.lineTo(doorEdge.b.x - mapLayout.halfTileWidth, doorEdge.b.y - mapLayout.halfTileHeight);
-    context.lineTo(
-      doorEdge.b.x - mapLayout.halfTileWidth,
-      doorEdge.b.y - mapLayout.halfTileHeight - wallHeight * 0.72
-    );
-    context.lineTo(
-      doorEdge.a.x - mapLayout.halfTileWidth,
-      doorEdge.a.y - mapLayout.halfTileHeight - wallHeight * 0.72
-    );
-    context.closePath();
-    context.fill();
   },
 
   drawWallOverlays(context, mapLayout) {
