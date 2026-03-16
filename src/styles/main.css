@@ -47,11 +47,7 @@ body {
   display: grid;
   grid-template-columns: repeat(8, minmax(0, 1fr));
   gap: 0.6rem;
-  padding: 0.7rem;
-  border-radius: 0.95rem;
-  border: 1px solid #263243;
-  background: linear-gradient(180deg, #121b2d 0%, #101827 100%);
-  box-shadow: 0 14px 30px rgb(2 6 23 / 32%);
+  padding: 0;
 }
 
 .metric {
@@ -59,22 +55,37 @@ body {
   gap: 0.15rem;
   align-content: start;
   padding: 0.45rem 0.55rem;
-  padding-right: 2.5rem;
-  border-radius: 0.65rem;
-  border: 1px solid #2a3b54;
-  background: #0f1728;
+  padding-right: 4.1rem;
   position: relative;
+  min-height: 4.8rem;
+  isolation: isolate;
+}
+
+.metric::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url('../assets/ui/frame_topbox.png') center / 100% 100% no-repeat;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.metric > * {
+  position: relative;
+  z-index: 1;
 }
 
 .metric span {
   color: #93a8c7;
-  font-size: 0.74rem;
+  font-size: 0.925rem;
   letter-spacing: 0.02em;
 }
 
 .metric strong {
   color: #f8fafc;
-  font-size: 1rem;
+  font-size: 1.25rem;
 }
 
 .metric strong.is-danger {
@@ -83,26 +94,30 @@ body {
 
 .metric-stat-btn {
   position: absolute;
-  top: 0.35rem;
-  right: 0.45rem;
-  width: 1.7rem;
-  height: 1.7rem;
-  border: 1px solid #3a506f;
-  border-radius: 0.45rem;
-  background: #14243d;
-  color: #dbe8fb;
-  font-size: 0.88rem;
-  line-height: 1;
+  top: 0.28rem;
+  right: 0.35rem;
+  width: 3.1rem;
+  aspect-ratio: 28 / 27;
+  border: 0;
+  border-radius: 0;
+  background: url('../assets/ui/button_info.png') center / 100% 100% no-repeat;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  color: transparent;
+  font-size: 0;
+  line-height: 0;
   display: grid;
   place-items: center;
   cursor: pointer;
+  z-index: 2;
+  transition: transform 120ms ease, filter 120ms ease;
 }
 
 .metric-stat-btn:hover,
 .metric-stat-btn:focus-visible,
 .metric-stat-btn.is-active {
-  border-color: #6ea0ff;
-  background: #1a3b67;
+  transform: translateY(-1px);
+  filter: brightness(1.12);
   outline: none;
 }
 
@@ -163,7 +178,7 @@ body {
 
 .fee-metric #subscription-value {
   margin-top: 0.22rem;
-  font-size: 0.9rem;
+  font-size: 1.125rem;
 }
 
 .game-shell {
@@ -171,8 +186,6 @@ body {
   height: 100%;
   position: relative;
   background: linear-gradient(180deg, #141d2e 0%, #0d1422 100%);
-  border: 1px solid #1f2937;
-  border-radius: 0.9rem;
   overflow: hidden;
 }
 
@@ -188,7 +201,7 @@ body {
   display: none;
   align-content: center;
   justify-items: center;
-  gap: 1.15rem;
+  overflow: auto;
   background: rgb(7 12 22 / 62%);
   z-index: 12;
 }
@@ -203,14 +216,32 @@ body {
   display: none;
   align-content: center;
   justify-items: center;
-  gap: 1rem;
   padding: 1rem;
+  overflow: auto;
   background: rgb(7 12 22 / 62%);
   z-index: 13;
 }
 
 .location-screen.is-open {
   display: grid;
+}
+
+.selection-screen-content {
+  transform: scale(1.25);
+  transform-origin: center;
+}
+
+.title-screen-content {
+  display: grid;
+  justify-items: center;
+  gap: 1.15rem;
+}
+
+.location-screen-content {
+  width: min(920px, 100%);
+  display: grid;
+  justify-items: center;
+  gap: 1rem;
 }
 
 .game-over-screen {
@@ -265,14 +296,14 @@ body {
 
 .location-screen h2 {
   margin: 0;
-  font-size: clamp(1.8rem, 3.2vw, 2.4rem);
+  font-size: clamp(2.25rem, 4vw, 3rem);
   color: #e2e8f0;
 }
 
 .location-selection-grid {
-  width: min(920px, 100%);
+  width: 100%;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1.2fr) minmax(0, 0.95fr);
   gap: 0.9rem;
   align-items: start;
 }
@@ -286,7 +317,7 @@ body {
 .location-selection-column h3 {
   margin: 0;
   color: #dbe8fb;
-  font-size: 1rem;
+  font-size: 1.25rem;
 }
 
 .location-options {
@@ -337,11 +368,12 @@ body {
 
 .location-option-title {
   font-weight: 700;
+  font-size: 1.25rem;
   color: #e2e8f0;
 }
 
 .location-option-meta {
-  font-size: 0.86rem;
+  font-size: 1.075rem;
   color: #a9bdd9;
 }
 
@@ -371,7 +403,7 @@ body {
   background: #111b2c;
   color: #f8fafc;
   padding: 0.45rem 0.55rem;
-  font-size: 0.92rem;
+  font-size: 1.15rem;
 }
 
 .location-field-input:focus,
@@ -391,25 +423,40 @@ body {
 }
 
 .location-start-btn {
-  border: 1px solid #475569;
-  border-radius: 0.65rem;
-  background: #334155;
-  color: #94a3b8;
-  font-weight: 700;
-  padding: 0.6rem 1.2rem;
+  --start-btn-width: min(320px, 82vw);
+  width: var(--start-btn-width);
+  min-width: 220px;
+  aspect-ratio: 134 / 32;
+  height: auto;
+  border: 0;
+  border-radius: 0;
+  background: url('../assets/ui/button_start.png') center / 100% 100% no-repeat;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  transform-origin: center;
+  transition: transform 120ms ease, filter 120ms ease;
+  font-size: 0;
+  line-height: 0;
   cursor: not-allowed;
+  filter: grayscale(0.55) brightness(0.72);
 }
 
 .location-start-btn.is-active {
-  border-color: #2f8f44;
-  background: #15803d;
-  color: #ecfdf5;
+  filter: none;
   cursor: pointer;
+}
+
+.location-start-btn.is-active:hover {
+  transform: scale(1.03);
+}
+
+.location-start-btn.is-active:active {
+  transform: scale(0.98);
 }
 
 .title-screen h1 {
   margin: 0;
-  font-size: clamp(2.2rem, 5vw, 4rem);
+  font-size: clamp(2.75rem, 6.25vw, 5rem);
   letter-spacing: 0.02em;
   color: #e2e8f0;
   text-shadow: 0 14px 30px rgb(2 6 23 / 35%);
@@ -426,6 +473,7 @@ body {
   border-radius: 0.65rem;
   background: #142034;
   color: #dbe8fb;
+  font-size: 1.25rem;
   font-weight: 600;
   padding: 0.7rem 1rem;
   cursor: pointer;

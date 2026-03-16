@@ -181,7 +181,7 @@ export class LocationScene {
 
     drawText(context, 'Choose Gym Setup', centerX, centerY - 150, {
       color: '#e2e8f0',
-      size: 38,
+      size: 48,
       align: 'center',
       baseline: 'middle',
       shadow: true
@@ -189,7 +189,7 @@ export class LocationScene {
 
     drawText(context, this.getLocationSubtitle(), centerX, centerY - 112, {
       color: '#93c5fd',
-      size: 16,
+      size: 20,
       align: 'center',
       baseline: 'middle'
     });

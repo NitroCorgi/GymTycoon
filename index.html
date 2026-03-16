@@ -65,173 +65,177 @@
       <main class="game-shell">
         <canvas id="game-canvas" aria-label="Game canvas"></canvas>
         <section id="title-screen" class="title-screen" aria-label="Title screen">
-          <h1>Gym Tycoon</h1>
-          <div class="title-screen-actions">
-            <button id="campaign-btn" type="button" disabled>Campaign</button>
-            <button id="free-mode-btn" type="button">Free Mode</button>
+          <div class="selection-screen-content title-screen-content">
+            <h1>Gym Tycoon</h1>
+            <div class="title-screen-actions">
+              <button id="campaign-btn" type="button" disabled>Campaign</button>
+              <button id="free-mode-btn" type="button">Free Mode</button>
+            </div>
           </div>
         </section>
 
         <section id="location-screen" class="location-screen" aria-label="Location selection screen">
-          <h2>Select Setup</h2>
-          <div class="location-selection-grid">
-            <div class="location-selection-column" role="group" aria-label="Available locations">
-              <h3>Location</h3>
-              <div class="location-options">
-                <label class="location-option" for="location-home-ground-floor">
-                  <input
-                    id="location-home-ground-floor"
-                    class="location-option-check"
-                    type="checkbox"
-                    data-location-option
-                    value="home-ground-floor"
-                  />
-                  <span class="location-option-content">
-                    <span class="location-option-title">Empty room in your home's ground floor</span>
-                    <span class="location-option-meta">Map: 6x6</span>
-                    <span class="location-option-meta">Rent: 200 EUR / month</span>
-                    <span class="location-option-meta">~5 customer encounters / month (+1 per month)</span>
-                  </span>
-                </label>
+          <div class="selection-screen-content location-screen-content">
+            <h2>Select Setup</h2>
+            <div class="location-selection-grid">
+              <div class="location-selection-column" role="group" aria-label="Available locations">
+                <h3>Location</h3>
+                <div class="location-options">
+                  <label class="location-option" for="location-home-ground-floor">
+                    <input
+                      id="location-home-ground-floor"
+                      class="location-option-check"
+                      type="checkbox"
+                      data-location-option
+                      value="home-ground-floor"
+                    />
+                    <span class="location-option-content">
+                      <span class="location-option-title">Empty room in your home's ground floor</span>
+                      <span class="location-option-meta">Map: 6x6</span>
+                      <span class="location-option-meta">Rent: 200 EUR / month</span>
+                      <span class="location-option-meta">~5 customer encounters / month (+1 per month)</span>
+                    </span>
+                  </label>
 
-                <label class="location-option" for="location-small-rural">
-                  <input
-                    id="location-small-rural"
-                    class="location-option-check"
-                    type="checkbox"
-                    data-location-option
-                    value="small-rural"
-                  />
-                  <span class="location-option-content">
-                    <span class="location-option-title">Small Property in rural area</span>
-                    <span class="location-option-meta">Map: 8x8</span>
-                    <span class="location-option-meta">Rent: $500 / month</span>
-                    <span class="location-option-meta">~10 customer encounters / month (+1 per month)</span>
-                  </span>
-                </label>
-                <label class="location-option" for="location-medium-suburban">
-                  <input
-                    id="location-medium-suburban"
-                    class="location-option-check"
-                    type="checkbox"
-                    data-location-option
-                    value="medium-suburban"
-                  />
-                  <span class="location-option-content">
-                    <span class="location-option-title">Medium Property in suburban district</span>
-                    <span class="location-option-meta">Map: 12x10</span>
-                    <span class="location-option-meta">Rent: $1,500 / month</span>
-                    <span class="location-option-meta">~20 customer encounters / month (+2 per month)</span>
-                  </span>
-                </label>
-                <label class="location-option" for="location-downtown-prime">
-                  <input
-                    id="location-downtown-prime"
-                    class="location-option-check"
-                    type="checkbox"
-                    data-location-option
-                    value="downtown-prime"
-                  />
-                  <span class="location-option-content">
-                    <span class="location-option-title">Downtown property in prime location</span>
-                    <span class="location-option-meta">Map: L-shaped (10x12 + 3x5)</span>
-                    <span class="location-option-meta">Rent: $3,000 / month</span>
-                    <span class="location-option-meta">~30 customer encounters / month (+3 per month)</span>
-                  </span>
-                </label>
+                  <label class="location-option" for="location-small-rural">
+                    <input
+                      id="location-small-rural"
+                      class="location-option-check"
+                      type="checkbox"
+                      data-location-option
+                      value="small-rural"
+                    />
+                    <span class="location-option-content">
+                      <span class="location-option-title">Small Property in rural area</span>
+                      <span class="location-option-meta">Map: 8x8</span>
+                      <span class="location-option-meta">Rent: $500 / month</span>
+                      <span class="location-option-meta">~10 customer encounters / month (+1 per month)</span>
+                    </span>
+                  </label>
+                  <label class="location-option" for="location-medium-suburban">
+                    <input
+                      id="location-medium-suburban"
+                      class="location-option-check"
+                      type="checkbox"
+                      data-location-option
+                      value="medium-suburban"
+                    />
+                    <span class="location-option-content">
+                      <span class="location-option-title">Medium Property in suburban district</span>
+                      <span class="location-option-meta">Map: 12x10</span>
+                      <span class="location-option-meta">Rent: $1,500 / month</span>
+                      <span class="location-option-meta">~20 customer encounters / month (+2 per month)</span>
+                    </span>
+                  </label>
+                  <label class="location-option" for="location-downtown-prime">
+                    <input
+                      id="location-downtown-prime"
+                      class="location-option-check"
+                      type="checkbox"
+                      data-location-option
+                      value="downtown-prime"
+                    />
+                    <span class="location-option-content">
+                      <span class="location-option-title">Downtown property in prime location</span>
+                      <span class="location-option-meta">Map: L-shaped (10x12 + 3x5)</span>
+                      <span class="location-option-meta">Rent: $3,000 / month</span>
+                      <span class="location-option-meta">~30 customer encounters / month (+3 per month)</span>
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="location-selection-column" role="group" aria-label="Available difficulties">
+                <h3>Difficulty</h3>
+                <div class="location-options">
+                  <label class="location-option" for="difficulty-sanbox">
+                    <input
+                      id="difficulty-sanbox"
+                      class="location-option-check"
+                      type="checkbox"
+                      data-difficulty-option
+                      value="sanbox"
+                    />
+                    <span class="location-option-content">
+                      <span class="location-option-title">Sanbox</span>
+                      <span class="location-option-meta">Starting bank: €9,999,999</span>
+                    </span>
+                  </label>
+
+                  <label class="location-option" for="difficulty-easy">
+                    <input
+                      id="difficulty-easy"
+                      class="location-option-check"
+                      type="checkbox"
+                      data-difficulty-option
+                      value="easy"
+                    />
+                    <span class="location-option-content">
+                      <span class="location-option-title">Easy</span>
+                      <span class="location-option-meta">Starting bank: €100,000</span>
+                    </span>
+                  </label>
+                  <label class="location-option" for="difficulty-medium">
+                    <input
+                      id="difficulty-medium"
+                      class="location-option-check"
+                      type="checkbox"
+                      data-difficulty-option
+                      value="medium"
+                    />
+                    <span class="location-option-content">
+                      <span class="location-option-title">Medium</span>
+                      <span class="location-option-meta">Starting bank: €50,000</span>
+                    </span>
+                  </label>
+                  <label class="location-option" for="difficulty-hard">
+                    <input
+                      id="difficulty-hard"
+                      class="location-option-check"
+                      type="checkbox"
+                      data-difficulty-option
+                      value="hard"
+                    />
+                    <span class="location-option-content">
+                      <span class="location-option-title">Hard</span>
+                      <span class="location-option-meta">Starting bank: €30,000</span>
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="location-selection-column" role="group" aria-label="Gym profile settings">
+                <h3>Gym Profile</h3>
+                <div class="location-custom-fields">
+                  <label class="location-field" for="location-gym-name-input">
+                    <span class="location-field-label">Your Gym Name</span>
+                    <input
+                      id="location-gym-name-input"
+                      class="location-field-input"
+                      type="text"
+                      maxlength="24"
+                      value="My Gym"
+                      placeholder="My Gym"
+                      aria-label="Your Gym Name"
+                    />
+                    <span class="location-option-meta">Max 24 characters</span>
+                  </label>
+
+                  <label class="location-field" for="location-gym-color-input">
+                    <span class="location-field-label">Your gym main color</span>
+                    <input
+                      id="location-gym-color-input"
+                      class="location-color-input"
+                      type="color"
+                      value="#6ea0ff"
+                      aria-label="Your gym main color"
+                    />
+                  </label>
+                </div>
               </div>
             </div>
-
-            <div class="location-selection-column" role="group" aria-label="Available difficulties">
-              <h3>Difficulty</h3>
-              <div class="location-options">
-                <label class="location-option" for="difficulty-sanbox">
-                  <input
-                    id="difficulty-sanbox"
-                    class="location-option-check"
-                    type="checkbox"
-                    data-difficulty-option
-                    value="sanbox"
-                  />
-                  <span class="location-option-content">
-                    <span class="location-option-title">Sanbox</span>
-                    <span class="location-option-meta">Starting bank: €9,999,999</span>
-                  </span>
-                </label>
-
-                <label class="location-option" for="difficulty-easy">
-                  <input
-                    id="difficulty-easy"
-                    class="location-option-check"
-                    type="checkbox"
-                    data-difficulty-option
-                    value="easy"
-                  />
-                  <span class="location-option-content">
-                    <span class="location-option-title">Easy</span>
-                    <span class="location-option-meta">Starting bank: €100,000</span>
-                  </span>
-                </label>
-                <label class="location-option" for="difficulty-medium">
-                  <input
-                    id="difficulty-medium"
-                    class="location-option-check"
-                    type="checkbox"
-                    data-difficulty-option
-                    value="medium"
-                  />
-                  <span class="location-option-content">
-                    <span class="location-option-title">Medium</span>
-                    <span class="location-option-meta">Starting bank: €50,000</span>
-                  </span>
-                </label>
-                <label class="location-option" for="difficulty-hard">
-                  <input
-                    id="difficulty-hard"
-                    class="location-option-check"
-                    type="checkbox"
-                    data-difficulty-option
-                    value="hard"
-                  />
-                  <span class="location-option-content">
-                    <span class="location-option-title">Hard</span>
-                    <span class="location-option-meta">Starting bank: €30,000</span>
-                  </span>
-                </label>
-              </div>
-            </div>
-
-            <div class="location-selection-column" role="group" aria-label="Gym profile settings">
-              <h3>Gym Profile</h3>
-              <div class="location-custom-fields">
-                <label class="location-field" for="location-gym-name-input">
-                  <span class="location-field-label">Your Gym Name</span>
-                  <input
-                    id="location-gym-name-input"
-                    class="location-field-input"
-                    type="text"
-                    maxlength="24"
-                    value="My Gym"
-                    placeholder="My Gym"
-                    aria-label="Your Gym Name"
-                  />
-                  <span class="location-option-meta">Max 24 characters</span>
-                </label>
-
-                <label class="location-field" for="location-gym-color-input">
-                  <span class="location-field-label">Your gym main color</span>
-                  <input
-                    id="location-gym-color-input"
-                    class="location-color-input"
-                    type="color"
-                    value="#6ea0ff"
-                    aria-label="Your gym main color"
-                  />
-                </label>
-              </div>
-            </div>
+            <button id="location-start-btn" class="location-start-btn" type="button" disabled aria-label="Start Game"></button>
           </div>
-          <button id="location-start-btn" class="location-start-btn" type="button" disabled>Start Game</button>
         </section>
 
         <section id="game-over-screen" class="game-over-screen" aria-label="Game over screen">
