@@ -279,12 +279,16 @@ export const ITEM_CATALOG = {
     label: 'Reception Desk',
     type: 'check-in',
     shortLabel: 'CI',
+    footprintRows: 1,
+    footprintCols: 2,
     cost: 1000,
     monthlyCost: 500,
     checkInSeconds: 5,
     popularity: 0,
     initialBreakChance: 0,
-    color: '#9ca3af'
+    color: '#9ca3af',
+    gymColorTint: true,
+    gymColorTintSecondaryShade: true
   },
   turnstile: {
     label: 'Turnstile',
@@ -295,7 +299,8 @@ export const ITEM_CATALOG = {
     checkInSeconds: 2,
     popularity: 0,
     initialBreakChance: 0,
-    color: '#94a3b8'
+    color: '#94a3b8',
+    gymColorTint: true
   },
   lockerRack2: {
     label: '2x Locker Rack',
@@ -307,7 +312,8 @@ export const ITEM_CATALOG = {
     lockerCapacity: 2,
     popularity: 0,
     initialBreakChance: 0,
-    color: '#14532d'
+    color: '#14532d',
+    gymColorTint: true
   },
   lockerRack4: {
     label: '4x Locker Rack',
@@ -319,7 +325,8 @@ export const ITEM_CATALOG = {
     lockerCapacity: 4,
     popularity: 0,
     initialBreakChance: 0,
-    color: '#166534'
+    color: '#166534',
+    gymColorTint: true
   },
   lockerRack6: {
     label: '6x Locker Rack',
@@ -331,7 +338,8 @@ export const ITEM_CATALOG = {
     lockerCapacity: 6,
     popularity: 0,
     initialBreakChance: 0,
-    color: '#065f46'
+    color: '#065f46',
+    gymColorTint: true
   },
   vendingMachine: {
     label: 'Vending Machine',

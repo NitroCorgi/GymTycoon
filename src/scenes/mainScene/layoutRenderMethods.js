@@ -288,7 +288,7 @@ export const layoutRenderMethods = {
     return image;
   },
 
-  getWallTintedSprite(assetSource, tintHex) {
+  getWallTintedSprite(assetSource, tintHex, options = {}) {
     const sourceImage = this.getAssetImage(assetSource);
     if (!sourceImage?.complete || sourceImage.naturalWidth <= 0 || sourceImage.naturalHeight <= 0) {
       return null;
@@ -296,12 +296,17 @@ export const layoutRenderMethods = {
 
     const normalizedTintHex = typeof tintHex === 'string' && /^#[0-9a-fA-F]{6}$/.test(tintHex) ? tintHex : '#6ea0ff';
     const [targetRed, targetGreen, targetBlue] = this.hexToRgb(normalizedTintHex);
+    const replaceSecondaryGray = options?.replaceSecondaryGray === true;
+    const secondaryScale = Number.isFinite(options?.secondaryScale) ? options.secondaryScale : 0.75;
+    const secondaryRed = Math.round(targetRed * secondaryScale);
+    const secondaryGreen = Math.round(targetGreen * secondaryScale);
+    const secondaryBlue = Math.round(targetBlue * secondaryScale);
 
     if (!this.wallTintedSpriteCache) {
       this.wallTintedSpriteCache = new Map();
     }
 
-    const cacheKey = `${assetSource}|${normalizedTintHex.toLowerCase()}`;
+    const cacheKey = `${assetSource}|${normalizedTintHex.toLowerCase()}|${replaceSecondaryGray ? 'gray' : 'none'}|${secondaryScale}`;
     const cachedCanvas = this.wallTintedSpriteCache.get(cacheKey);
     if (cachedCanvas) {
       return cachedCanvas;
@@ -329,6 +334,10 @@ export const layoutRenderMethods = {
         imageData.data[index] = targetRed;
         imageData.data[index + 1] = targetGreen;
         imageData.data[index + 2] = targetBlue;
+      } else if (replaceSecondaryGray && alpha > 0 && red === 199 && green === 199 && blue === 199) {
+        imageData.data[index] = secondaryRed;
+        imageData.data[index + 1] = secondaryGreen;
+        imageData.data[index + 2] = secondaryBlue;
       }
     }
 
@@ -407,9 +416,17 @@ export const layoutRenderMethods = {
     const drawX = anchorX - drawWidth / 2;
     const drawY = anchorY - drawHeight;
 
+    const drawSource =
+      itemConfig.gymColorTint && this.gymMainColor
+        ? this.getWallTintedSprite(assetSource, this.gymMainColor, {
+            replaceSecondaryGray: itemConfig.gymColorTintSecondaryShade === true,
+            secondaryScale: 0.75
+          }) ?? image
+        : image;
+
     context.save();
-    context.imageSmoothingEnabled = true;
-    context.drawImage(image, drawX, drawY, drawWidth, drawHeight);
+    context.imageSmoothingEnabled = false;
+    context.drawImage(drawSource, drawX, drawY, drawWidth, drawHeight);
     context.restore();
     return true;
   },
