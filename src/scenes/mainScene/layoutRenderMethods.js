@@ -301,12 +301,17 @@ export const layoutRenderMethods = {
     const secondaryRed = Math.round(targetRed * secondaryScale);
     const secondaryGreen = Math.round(targetGreen * secondaryScale);
     const secondaryBlue = Math.round(targetBlue * secondaryScale);
+    const replaceTertiaryGray = options?.replaceTertiaryGray === true;
+    const tertiaryScale = Number.isFinite(options?.tertiaryScale) ? options.tertiaryScale : 0.5;
+    const tertiaryRed = Math.round(targetRed * tertiaryScale);
+    const tertiaryGreen = Math.round(targetGreen * tertiaryScale);
+    const tertiaryBlue = Math.round(targetBlue * tertiaryScale);
 
     if (!this.wallTintedSpriteCache) {
       this.wallTintedSpriteCache = new Map();
     }
 
-    const cacheKey = `${assetSource}|${normalizedTintHex.toLowerCase()}|${replaceSecondaryGray ? 'gray' : 'none'}|${secondaryScale}`;
+    const cacheKey = `${assetSource}|${normalizedTintHex.toLowerCase()}|${replaceSecondaryGray ? 'gray2' : 'none2'}|${secondaryScale}|${replaceTertiaryGray ? 'gray3' : 'none3'}|${tertiaryScale}`;
     const cachedCanvas = this.wallTintedSpriteCache.get(cacheKey);
     if (cachedCanvas) {
       return cachedCanvas;
@@ -338,6 +343,10 @@ export const layoutRenderMethods = {
         imageData.data[index] = secondaryRed;
         imageData.data[index + 1] = secondaryGreen;
         imageData.data[index + 2] = secondaryBlue;
+      } else if (replaceTertiaryGray && alpha > 0 && red === 145 && green === 145 && blue === 145) {
+        imageData.data[index] = tertiaryRed;
+        imageData.data[index + 1] = tertiaryGreen;
+        imageData.data[index + 2] = tertiaryBlue;
       }
     }
 
@@ -420,7 +429,9 @@ export const layoutRenderMethods = {
       itemConfig.gymColorTint && this.gymMainColor
         ? this.getWallTintedSprite(assetSource, this.gymMainColor, {
             replaceSecondaryGray: itemConfig.gymColorTintSecondaryShade === true,
-            secondaryScale: 0.75
+            secondaryScale: 0.75,
+            replaceTertiaryGray: itemConfig.gymColorTintTertiaryShade === true,
+            tertiaryScale: 0.5
           }) ?? image
         : image;
 

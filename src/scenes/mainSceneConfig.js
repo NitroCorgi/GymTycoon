@@ -362,7 +362,10 @@ export const ITEM_CATALOG = {
     lockerCapacity: 0,
     popularity: 0,
     initialBreakChance: 0.02,
-    color: '#64748b'
+    color: '#64748b',
+    gymColorTint: true,
+    gymColorTintSecondaryShade: true,
+    gymColorTintTertiaryShade: true
   },
   floorTilesWood: {
     label: 'Floor Tiles (Wood)',
