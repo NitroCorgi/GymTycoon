@@ -7,10 +7,11 @@ import ellipticalRotation1 from '../assets/devices/elliptical/elliptical-r1.png'
 import ellipticalRotation2 from '../assets/devices/elliptical/elliptical-r2.png';
 import ellipticalRotation3 from '../assets/devices/elliptical/elliptical-r3.png';
 import dumbbellStationRotation1 from '../assets/devices/dumbbellStation/dumbbellStation-r1.png';
-import chestPressRotation1 from '../assets/devices/chestPress/chestPress-r1.png';
-import barbellRackRotation1 from '../assets/devices/barbellRack/barbellRack-r1.png';
 import benchPressRotation1 from '../assets/devices/benchPress/benchPress-r1.png';
 import battleRopesRotation1 from '../assets/devices/battleRopes/battleRopes-r1.png';
+import floorTilesWoodAsset from '../assets/decor/floorTilesWood/floorTilesWood.png';
+import windowLeftAsset from '../assets/decor/window/window_left.png';
+import windowRightAsset from '../assets/decor/window/window_right.png';
 import sidewalkTileSprite from '../assets/components/sidewalk.png';
 import streetTileSprite from '../assets/components/street.png';
 
@@ -131,42 +132,6 @@ export const ITEM_CATALOG = {
       ellipticalRotation3
     ]
   },
-  rowingMachine: {
-    label: 'Rowing Machine',
-    type: 'cardio',
-    shortLabel: 'RM',
-    footprintRows: 1,
-    footprintCols: 2,
-    cost: 2200,
-    monthlyCost: 0,
-    checkInSeconds: 0,
-    popularity: 4,
-    initialBreakChance: 0.04,
-    color: '#06b6d4'
-  },
-  stairClimber: {
-    label: 'Stair Climber',
-    type: 'cardio',
-    shortLabel: 'SC',
-    cost: 2500,
-    monthlyCost: 0,
-    checkInSeconds: 0,
-    popularity: 5,
-    initialBreakChance: 0.03,
-    color: '#0891b2'
-  },
-  chestPress: {
-    label: 'Chest Press Machine',
-    type: 'strength',
-    shortLabel: 'CP',
-    cost: 1700,
-    monthlyCost: 0,
-    checkInSeconds: 0,
-    popularity: 3,
-    initialBreakChance: 0.08,
-    color: '#f87171',
-    assetRotations: [chestPressRotation1]
-  },
   latPulldown: {
     label: 'Lat Pulldown',
     type: 'strength',
@@ -177,40 +142,6 @@ export const ITEM_CATALOG = {
     popularity: 3,
     initialBreakChance: 0.07,
     color: '#ef4444'
-  },
-  smithMachine: {
-    label: 'Smith Machine',
-    type: 'strength',
-    shortLabel: 'SM',
-    cost: 3000,
-    monthlyCost: 0,
-    checkInSeconds: 0,
-    popularity: 5,
-    initialBreakChance: 0.05,
-    color: '#dc2626'
-  },
-  barbellRack: {
-    label: 'Barbell Rack',
-    type: 'weightlifting',
-    shortLabel: 'BR',
-    cost: 2000,
-    monthlyCost: 0,
-    checkInSeconds: 0,
-    popularity: 4,
-    initialBreakChance: 0.06,
-    color: '#fbbf24',
-    assetRotations: [barbellRackRotation1]
-  },
-  powerRack: {
-    label: 'Power Rack',
-    type: 'weightlifting',
-    shortLabel: 'PR',
-    cost: 3500,
-    monthlyCost: 0,
-    checkInSeconds: 0,
-    popularity: 5,
-    initialBreakChance: 0.04,
-    color: '#f59e0b'
   },
   benchPress: {
     label: 'Bench Press',
@@ -226,17 +157,6 @@ export const ITEM_CATALOG = {
     color: '#d97706',
     assetRotations: [benchPressRotation1]
   },
-  kettlebellSet: {
-    label: 'Kettlebell Set',
-    type: 'functional',
-    shortLabel: 'KB',
-    cost: 1400,
-    monthlyCost: 0,
-    checkInSeconds: 0,
-    popularity: 3,
-    initialBreakChance: 0.03,
-    color: '#34d399'
-  },
   battleRopes: {
     label: 'Battle Ropes',
     type: 'functional',
@@ -250,17 +170,6 @@ export const ITEM_CATALOG = {
     initialBreakChance: 0.04,
     color: '#10b981',
     assetRotations: [battleRopesRotation1]
-  },
-  massageChair: {
-    label: 'Massage Chair',
-    type: 'recovery',
-    shortLabel: 'MC',
-    cost: 4000,
-    monthlyCost: 0,
-    checkInSeconds: 0,
-    popularity: 4,
-    initialBreakChance: 0.02,
-    color: '#a78bfa'
   },
   stretchZone: {
     label: 'Stretch Zone',
@@ -377,23 +286,33 @@ export const ITEM_CATALOG = {
     popularity: 0,
     initialBreakChance: 0,
     color: '#b45309',
-    decorTarget: 'floor'
+    decorTarget: 'floor',
+    assetRotations: [floorTilesWoodAsset]
   },
-  wallpaperWhite: {
-    label: 'Wallpaper (White)',
+  window: {
+    label: 'Window',
     type: 'decor',
-    shortLabel: 'WW',
-    cost: 10,
+    shortLabel: 'WN',
+    cost: 250,
     monthlyCost: 0,
     checkInSeconds: 0,
     popularity: 0,
     initialBreakChance: 0,
     color: '#e5e7eb',
-    decorTarget: 'wall'
+    decorTarget: 'wall',
+    wallAssetBySide: {
+      left: windowLeftAsset,
+      right: windowRightAsset
+    }
   }
 };
 
 for (const [itemKey, itemConfig] of Object.entries(ITEM_CATALOG)) {
+  if (getAssetCategoryFolder(itemConfig.type) === 'devices') {
+    itemConfig.gymColorTint = true;
+    itemConfig.gymColorTintSecondaryShade = true;
+  }
+
   const catalogAssetRotations = getCatalogAssetRotations(itemKey, itemConfig.type);
   if (!catalogAssetRotations) {
     continue;

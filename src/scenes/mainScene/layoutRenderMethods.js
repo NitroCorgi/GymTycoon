@@ -270,6 +270,23 @@ export const layoutRenderMethods = {
     return assetRotations[normalizedRotation] ?? assetRotations[0] ?? null;
   },
 
+  getWallDecorAssetSource(itemKey, side) {
+    const itemConfig = ITEM_CATALOG[itemKey];
+    if (!itemConfig || itemConfig.decorTarget !== 'wall') {
+      return null;
+    }
+
+    if (itemConfig.wallAssetBySide) {
+      const sideKey = side === 'left' ? 'left' : 'right';
+      const sideAsset = itemConfig.wallAssetBySide[sideKey];
+      if (sideAsset) {
+        return sideAsset;
+      }
+    }
+
+    return this.getItemAssetForRotation(itemKey, side === 'left' ? 0 : 1);
+  },
+
   getAssetImage(assetSource) {
     if (!assetSource) return null;
 
@@ -297,6 +314,13 @@ export const layoutRenderMethods = {
     const normalizedTintHex = typeof tintHex === 'string' && /^#[0-9a-fA-F]{6}$/.test(tintHex) ? tintHex : '#6ea0ff';
     const [targetRed, targetGreen, targetBlue] = this.hexToRgb(normalizedTintHex);
     const replaceSecondaryGray = options?.replaceSecondaryGray === true;
+    const secondaryGrayValues =
+      Array.isArray(options?.secondaryGrayValues) && options.secondaryGrayValues.length > 0
+        ? options.secondaryGrayValues
+            .filter((value) => Number.isFinite(value))
+            .map((value) => Math.max(0, Math.min(255, Math.round(value))))
+        : [199, 204];
+    const secondaryGrayValueSet = new Set(secondaryGrayValues);
     const secondaryScale = Number.isFinite(options?.secondaryScale) ? options.secondaryScale : 0.75;
     const secondaryRed = Math.round(targetRed * secondaryScale);
     const secondaryGreen = Math.round(targetGreen * secondaryScale);
@@ -311,7 +335,7 @@ export const layoutRenderMethods = {
       this.wallTintedSpriteCache = new Map();
     }
 
-    const cacheKey = `${assetSource}|${normalizedTintHex.toLowerCase()}|${replaceSecondaryGray ? 'gray2' : 'none2'}|${secondaryScale}|${replaceTertiaryGray ? 'gray3' : 'none3'}|${tertiaryScale}`;
+    const cacheKey = `${assetSource}|${normalizedTintHex.toLowerCase()}|${replaceSecondaryGray ? 'gray2' : 'none2'}|${secondaryGrayValues.join(',')}|${secondaryScale}|${replaceTertiaryGray ? 'gray3' : 'none3'}|${tertiaryScale}`;
     const cachedCanvas = this.wallTintedSpriteCache.get(cacheKey);
     if (cachedCanvas) {
       return cachedCanvas;
@@ -339,7 +363,13 @@ export const layoutRenderMethods = {
         imageData.data[index] = targetRed;
         imageData.data[index + 1] = targetGreen;
         imageData.data[index + 2] = targetBlue;
-      } else if (replaceSecondaryGray && alpha > 0 && red === 199 && green === 199 && blue === 199) {
+      } else if (
+        replaceSecondaryGray &&
+        alpha > 0 &&
+        red === green &&
+        green === blue &&
+        secondaryGrayValueSet.has(red)
+      ) {
         imageData.data[index] = secondaryRed;
         imageData.data[index + 1] = secondaryGreen;
         imageData.data[index + 2] = secondaryBlue;
@@ -611,11 +641,28 @@ export const layoutRenderMethods = {
         } else {
           const floorDecorKey = this.floorDecorTiles?.[row]?.[col];
           const hasWoodFloor = ITEM_CATALOG[floorDecorKey]?.decorTarget === 'floor';
+          const floorDecorAssetSource = hasWoodFloor ? this.getItemAssetForRotation(floorDecorKey, 0) : null;
+          const floorDecorImage = this.getAssetImage(floorDecorAssetSource);
+          const hasFloorDecorSprite =
+            floorDecorImage?.complete && floorDecorImage.naturalWidth > 0 && floorDecorImage.naturalHeight > 0;
           const defaultFloorImage = this.getAssetImage(defaultFloorTileAsset);
           const hasDefaultFloorSprite =
             defaultFloorImage?.complete && defaultFloorImage.naturalWidth > 0 && defaultFloorImage.naturalHeight > 0;
 
-          if (!hasWoodFloor && hasDefaultFloorSprite) {
+          if (hasWoodFloor && hasFloorDecorSprite) {
+            this.drawIsoGroundSprite(context, floorDecorImage, col, row, mapLayout);
+
+            if (hovered) {
+              context.beginPath();
+              context.moveTo(center.x, center.y - mapLayout.tileHeight / 2);
+              context.lineTo(center.x + mapLayout.tileWidth / 2, center.y);
+              context.lineTo(center.x, center.y + mapLayout.tileHeight / 2);
+              context.lineTo(center.x - mapLayout.tileWidth / 2, center.y);
+              context.closePath();
+              context.fillStyle = 'rgb(51 65 85 / 45%)';
+              context.fill();
+            }
+          } else if (!hasWoodFloor && hasDefaultFloorSprite) {
             this.drawIsoGroundSprite(context, defaultFloorImage, col, row, mapLayout);
 
             if (hovered) {
@@ -711,8 +758,8 @@ export const layoutRenderMethods = {
       }
 
       const wallpaperKey = this.wallpaperTopByCol?.[col];
-      const hasWallpaper = ITEM_CATALOG[wallpaperKey]?.decorTarget === 'wall';
-      const tintColor = hasWallpaper ? '#FFFFFF' : primaryColor;
+      const wallDecorAssetSource = this.getWallDecorAssetSource(wallpaperKey, 'top');
+      const tintColor = wallDecorAssetSource ? null : primaryColor;
 
       wallSegments.push({
         tileX: col,
@@ -720,6 +767,7 @@ export const layoutRenderMethods = {
         side: 'top',
         index: col,
         tintColor,
+        wallDecorAssetSource,
         assetSource: wallRightAsset
       });
 
@@ -753,8 +801,8 @@ export const layoutRenderMethods = {
       }
 
       const wallpaperKey = this.wallpaperLeftByRow?.[row];
-      const hasWallpaper = ITEM_CATALOG[wallpaperKey]?.decorTarget === 'wall';
-      const tintColor = hasWallpaper ? '#FFFFFF' : primaryColor;
+      const wallDecorAssetSource = this.getWallDecorAssetSource(wallpaperKey, 'left');
+      const tintColor = wallDecorAssetSource ? null : primaryColor;
 
       wallSegments.push({
         tileX: -1,
@@ -762,6 +810,7 @@ export const layoutRenderMethods = {
         side: 'left',
         index: row,
         tintColor,
+        wallDecorAssetSource,
         assetSource: wallLeftAsset
       });
 
@@ -796,7 +845,14 @@ export const layoutRenderMethods = {
     });
 
     for (const segment of wallSegments) {
-      const wallSprite = this.getWallTintedSprite(segment.assetSource, segment.tintColor);
+      const decorSprite = this.getWallTintedSprite(segment.wallDecorAssetSource, primaryColor);
+      const hasDecorSprite =
+        !!decorSprite &&
+        (decorSprite.naturalWidth ?? decorSprite.width ?? 0) > 0 &&
+        (decorSprite.naturalHeight ?? decorSprite.height ?? 0) > 0;
+      const wallSprite = hasDecorSprite
+        ? decorSprite
+        : this.getWallTintedSprite(segment.assetSource, segment.tintColor);
       if (!wallSprite) {
         continue;
       }
@@ -875,48 +931,38 @@ export const layoutRenderMethods = {
         this.selectedItemKey,
         this.currentPlacementRotation
       );
-      const wallHeight = this.getWallHeight(mapLayout);
+      const wallDecorAssetSource = this.getWallDecorAssetSource(this.selectedItemKey, wallTarget.side);
+      const previewTintColor =
+        typeof this.gymMainColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(this.gymMainColor)
+          ? this.gymMainColor
+          : '#6ea0ff';
+      const wallDecorSprite = this.getWallTintedSprite(wallDecorAssetSource, previewTintColor);
+      const hasWallDecorSprite =
+        !!wallDecorSprite &&
+        (wallDecorSprite.naturalWidth ?? wallDecorSprite.width ?? 0) > 0 &&
+        (wallDecorSprite.naturalHeight ?? wallDecorSprite.height ?? 0) > 0;
 
-      context.save();
-      context.globalAlpha = canPlace ? 0.6 : 0.35;
-
-      if (wallTarget.side === 'top') {
-        const topEdge = this.getTopBorderEdge(wallTarget.col, mapLayout);
-        context.beginPath();
-        context.moveTo(topEdge.a.x + mapLayout.halfTileWidth, topEdge.a.y - mapLayout.halfTileHeight);
-        context.lineTo(topEdge.b.x + mapLayout.halfTileWidth, topEdge.b.y - mapLayout.halfTileHeight);
-        context.lineTo(
-          topEdge.b.x + mapLayout.halfTileWidth,
-          topEdge.b.y - mapLayout.halfTileHeight - wallHeight
+      if (hasWallDecorSprite) {
+        context.save();
+        context.globalAlpha = canPlace ? 0.68 : 0.38;
+        this.drawIsoAnchoredSprite(
+          context,
+          wallDecorSprite,
+          wallTarget.side === 'top' ? wallTarget.col : -1,
+          wallTarget.side === 'top' ? -1 : wallTarget.row,
+          mapLayout,
+          {
+            anchorX: wallTarget.side === 'left' ? 0 : mapLayout.wallSpriteWidth,
+            anchorY: mapLayout.wallSpriteHeight,
+            baseOffsetX: mapLayout.tileWidth / 2,
+            baseOffsetY: mapLayout.tileHeight,
+            drawWidth: mapLayout.wallSpriteWidth,
+            drawHeight: mapLayout.wallSpriteHeight
+          }
         );
-        context.lineTo(
-          topEdge.a.x + mapLayout.halfTileWidth,
-          topEdge.a.y - mapLayout.halfTileHeight - wallHeight
-        );
-        context.closePath();
-        context.fillStyle = canPlace ? '#f8fafc' : '#7f1d1d';
-        context.fill();
+        context.restore();
       }
 
-      if (wallTarget.side === 'left') {
-        const leftEdge = this.getLeftBorderEdge(wallTarget.row, mapLayout);
-        context.beginPath();
-        context.moveTo(leftEdge.a.x - mapLayout.halfTileWidth, leftEdge.a.y - mapLayout.halfTileHeight);
-        context.lineTo(leftEdge.b.x - mapLayout.halfTileWidth, leftEdge.b.y - mapLayout.halfTileHeight);
-        context.lineTo(
-          leftEdge.b.x - mapLayout.halfTileWidth,
-          leftEdge.b.y - mapLayout.halfTileHeight - wallHeight
-        );
-        context.lineTo(
-          leftEdge.a.x - mapLayout.halfTileWidth,
-          leftEdge.a.y - mapLayout.halfTileHeight - wallHeight
-        );
-        context.closePath();
-        context.fillStyle = canPlace ? '#f8fafc' : '#7f1d1d';
-        context.fill();
-      }
-
-      context.restore();
       return;
     }
 
