@@ -509,6 +509,42 @@ export const FREE_MODE_DIFFICULTIES = [
   }
 ];
 
+export const CAMPAIGN_LEVELS = [
+  {
+    id: 'level-1',
+    label: 'Level 1',
+    locationId: 'home-ground-floor',
+    locationLabel: "Empty room in your home's ground floor",
+    startingBank: 10000,
+    startingMembers: 0,
+    isAvailable: true,
+    description: 'Turn the empty room in your home into the first profitable gym in your campaign.',
+    goals: {
+      bank: 25000,
+      popularityStars: 2,
+      members: 30
+    }
+  },
+  {
+    id: 'level-2',
+    label: 'Level 2',
+    isAvailable: false,
+    description: 'Coming soon.'
+  },
+  {
+    id: 'level-3',
+    label: 'Level 3',
+    isAvailable: false,
+    description: 'Coming soon.'
+  },
+  {
+    id: 'level-4',
+    label: 'Level 4',
+    isAvailable: false,
+    description: 'Coming soon.'
+  }
+];
+
 export const EXTERIOR_MAP_STYLE = {
   edgeOverscanTiles: 10,
   tileBandsFromEntranceOutward: [

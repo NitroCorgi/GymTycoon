@@ -22,9 +22,10 @@ import { getTimeBarUiState } from '../systems/simulation/uiTimeHelpers.js';
 import { WeatherGenerator } from '../systems/simulation/WeatherGenerator.js';
 
 export class MainScene {
-  constructor({ ui, onGameOver }) {
+  constructor({ ui, onGameOver, onCampaignVictory }) {
     this.ui = ui;
     this.onGameOver = onGameOver;
+    this.onCampaignVictory = onCampaignVictory;
     this.buyItemButtons = new Map();
     this.gameOverBankLimit = -50000;
 
@@ -36,6 +37,8 @@ export class MainScene {
   onEnter() {
     this.ui?.root?.classList.remove('is-title-screen');
     this.ui?.titleScreen?.classList.remove('is-open');
+    this.ui?.campaignScreen?.classList.remove('is-open');
+    this.ui?.campaignVictoryScreen?.classList.remove('is-open');
     this.ui?.locationScreen?.classList.remove('is-open');
     this.ui?.gameOverScreen?.classList.remove('is-open');
   }
@@ -115,8 +118,12 @@ export class MainScene {
       typeof setupConfig?.gymName === 'string' ? setupConfig.gymName.trim().slice(0, 24) : '';
     const configuredGymMainColor =
       typeof setupConfig?.gymMainColor === 'string' ? setupConfig.gymMainColor : '';
+    const configuredStartingBank = Number.isFinite(setupConfig?.startingBank)
+      ? Math.max(0, Math.floor(setupConfig.startingBank))
+      : null;
     this.gymName = configuredGymName || 'My Gym';
     this.gymMainColor = /^#[0-9a-fA-F]{6}$/.test(configuredGymMainColor) ? configuredGymMainColor : '#6ea0ff';
+    this.campaignConfig = setupConfig?.campaignConfig ?? null;
     this.mapRows = selectedLocation.mapRows ?? 8;
     this.mapCols = selectedLocation.mapCols ?? 8;
     this.tileAvailability = this.createTileAvailabilityGrid(
@@ -125,7 +132,7 @@ export class MainScene {
       selectedLocation.mapAreas
     );
 
-    this.money = selectedDifficulty.startingBank ?? 50000;
+    this.money = configuredStartingBank ?? selectedDifficulty.startingBank ?? 50000;
     this.subscriptionFee = 30;
     this.rentAmount = selectedLocation.monthlyRent ?? 1000;
     this.dailyEncountersBase = selectedLocation.dailyEncountersBase ?? selectedLocation.monthlyEncountersBase ?? 20;
@@ -157,6 +164,7 @@ export class MainScene {
     this.currentCycleLockerTurnedDown = 0;
     this.monthStartBank = this.money;
     this.isGameOver = false;
+    this.isCampaignComplete = false;
 
     this.buyMode = false;
     this.selectedItemKey = 'treadmill';
@@ -219,6 +227,7 @@ export class MainScene {
     this.tutorialUnlockedStageCount = 1;
     this.tutorialStageCompletions = [false, false, false];
     this.tutorialRenderStateKey = '';
+    this.campaignGoalsRenderStateKey = '';
     this.gymUpgradesRenderStateKey = '';
     this.gymAdministrationRenderStateKey = '';
     this.gymAdministrationDragState = null;
@@ -957,6 +966,74 @@ export class MainScene {
     return Math.min(5, Math.max(1, Math.floor(this.popularity / 20) + 1));
   }
 
+  getCampaignGoalProgressState() {
+    if (!this.campaignConfig?.goals) {
+      return null;
+    }
+
+    const { goals } = this.campaignConfig;
+    const stars = this.getTutorialPopularityStars();
+
+    return {
+      title: `${this.campaignConfig.label} Goals`,
+      items: [
+        {
+          key: 'bank',
+          label: `Have ${this.formatEuro(goals.bank)} in bank`,
+          progress: `${this.formatEuro(this.money)} / ${this.formatEuro(goals.bank)}`,
+          complete: this.money >= goals.bank
+        },
+        {
+          key: 'popularity',
+          label: `Reach ${goals.popularityStars} star popularity`,
+          progress: `${stars} / ${goals.popularityStars} stars`,
+          complete: stars >= goals.popularityStars
+        },
+        {
+          key: 'members',
+          label: `Have ${goals.members} members`,
+          progress: `${this.members} / ${goals.members}`,
+          complete: this.members >= goals.members
+        }
+      ]
+    };
+  }
+
+  renderCampaignGoalsPanel(panelElement) {
+    if (!panelElement) return;
+
+    const goalState = this.getCampaignGoalProgressState();
+    panelElement.classList.toggle('is-open', Boolean(goalState));
+
+    if (!goalState) {
+      panelElement.innerHTML = '';
+      this.campaignGoalsRenderStateKey = '';
+      return;
+    }
+
+    const renderKey = JSON.stringify(goalState);
+    if (renderKey === this.campaignGoalsRenderStateKey) {
+      return;
+    }
+
+    this.campaignGoalsRenderStateKey = renderKey;
+    panelElement.innerHTML = `
+      <h3>${goalState.title}</h3>
+      <div class="campaign-goals-list">
+        ${goalState.items
+          .map(
+            (item) => `
+              <div class="campaign-goal-item${item.complete ? ' is-complete' : ''}">
+                <p>${item.complete ? '☑' : '☐'} ${item.label}</p>
+                <span>${item.progress}</span>
+              </div>
+            `
+          )
+          .join('')}
+      </div>
+    `;
+  }
+
   getTutorialProgressState() {
     const definitions = this.getTutorialDefinitions();
     const stages = definitions.map((stage) => {
@@ -1004,6 +1081,37 @@ export class MainScene {
 
   renderTutorialChecklist(checklistBody) {
     if (!checklistBody) return;
+
+    const campaignGoals = this.getCampaignGoalProgressState();
+    if (campaignGoals) {
+      const renderKey = JSON.stringify({ campaignGoals });
+      if (renderKey === this.tutorialRenderStateKey) {
+        return;
+      }
+
+      this.tutorialRenderStateKey = renderKey;
+      if (this.ui?.tutorialModalTitle) {
+        this.ui.tutorialModalTitle.textContent = campaignGoals.title;
+      }
+
+      checklistBody.innerHTML = '';
+      const stageBlock = document.createElement('article');
+      stageBlock.className = 'tutorial-checklist-stage';
+
+      const list = document.createElement('div');
+      list.className = 'tutorial-checklist-items';
+
+      for (const item of campaignGoals.items) {
+        const row = document.createElement('p');
+        row.className = `tutorial-checklist-item${item.complete ? ' is-complete' : ''}`;
+        row.textContent = `${item.complete ? '☑' : '☐'} ${item.label} — ${item.progress}`;
+        list.appendChild(row);
+      }
+
+      stageBlock.appendChild(list);
+      checklistBody.appendChild(stageBlock);
+      return;
+    }
 
     const progress = this.getTutorialProgressState();
     const currentStageIndex = progress.stages.findIndex((stage) => !stage.complete);
@@ -1125,7 +1233,7 @@ export class MainScene {
   }
 
   update(deltaSeconds, game) {
-    if (this.isGameOver) return;
+    if (this.isGameOver || this.isCampaignComplete) return;
 
     this.handleMapZoom(game);
     this.handleMapDrag(game);
@@ -1147,8 +1255,31 @@ export class MainScene {
     this.updateBrokenDevices(deltaSeconds);
     this.updatePeople(deltaSeconds, mapLayout);
     this.updatePopularity();
+    if (this.evaluateCampaignState()) return;
     this.evaluateBankState();
     this.updateUiMetrics();
+  }
+
+  evaluateCampaignState() {
+    if (this.isGameOver || this.isCampaignComplete || !this.campaignConfig?.goals) {
+      return false;
+    }
+
+    const bankGoalReached = this.money >= (this.campaignConfig.goals.bank ?? Number.MAX_SAFE_INTEGER);
+    const popularityGoalReached = this.getTutorialPopularityStars() >= (this.campaignConfig.goals.popularityStars ?? 0);
+    const membersGoalReached = this.members >= (this.campaignConfig.goals.members ?? Number.MAX_SAFE_INTEGER);
+
+    if (!bankGoalReached || !popularityGoalReached || !membersGoalReached) {
+      return false;
+    }
+
+    this.isCampaignComplete = true;
+    this.onCampaignVictory?.({
+      levelId: this.campaignConfig.id,
+      levelLabel: this.campaignConfig.label,
+      gymName: this.gymName
+    });
+    return true;
   }
 
   evaluateBankState() {

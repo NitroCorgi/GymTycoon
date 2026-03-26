@@ -168,11 +168,21 @@
                     <span class="campaign-level-label">Level 4</span>
                   </label>
                 </div>
+                <div id="campaign-level-details" class="campaign-level-details" aria-live="polite"></div>
               </div>
             </div>
 
-            <button id="campaign-back-btn" class="campaign-back-btn" type="button">Back to Main Menu</button>
+            <div class="campaign-screen-actions">
+              <button id="campaign-start-btn" class="campaign-start-btn" type="button">Start Level</button>
+              <button id="campaign-back-btn" class="campaign-back-btn" type="button">Back to Main Menu</button>
+            </div>
           </div>
+        </section>
+
+        <section id="campaign-victory-screen" class="campaign-victory-screen" aria-label="Campaign victory screen">
+          <h2 id="campaign-victory-title">Level Complete</h2>
+          <p id="campaign-victory-message">Congratulations! You can now move on to the next level!</p>
+          <button id="campaign-victory-menu-btn" type="button">Return to Main Menu</button>
         </section>
 
         <section id="location-screen" class="location-screen" aria-label="Location selection screen">
@@ -491,6 +501,7 @@
 
         <section class="guide-dock" aria-label="Guide controls">
           <button id="guide-btn" type="button">Guide</button>
+          <div id="campaign-goals-panel" class="campaign-goals-panel" aria-live="polite"></div>
         </section>
       </main>
     </div>

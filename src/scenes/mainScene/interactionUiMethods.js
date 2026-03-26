@@ -841,6 +841,7 @@ export const interactionUiMethods = {
       customerThoughtsList,
       customerCard,
       guideButton,
+      campaignGoalsPanel,
       tutorialModal,
       tutorialChecklistBody,
       tutorialWelcomeModal,
@@ -1001,7 +1002,11 @@ export const interactionUiMethods = {
       sellDeviceButton.disabled = !selected && !selectedDecorConfig;
     }
 
+    if (guideButton) {
+      guideButton.textContent = this.campaignConfig?.goals ? 'Goals' : 'Guide';
+    }
     guideButton?.classList.toggle('is-active', this.tutorialVisible);
+    this.renderCampaignGoalsPanel(campaignGoalsPanel);
 
     tutorialModal?.classList.toggle('is-open', this.tutorialVisible);
     if (tutorialModal) {

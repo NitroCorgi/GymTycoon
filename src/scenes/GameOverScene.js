@@ -24,6 +24,7 @@ export class GameOverScene {
     this.ui?.root?.classList.add('is-title-screen');
     this.ui?.titleScreen?.classList.remove('is-open');
     this.ui?.campaignScreen?.classList.remove('is-open');
+    this.ui?.campaignVictoryScreen?.classList.remove('is-open');
     this.ui?.locationScreen?.classList.remove('is-open');
     this.ui?.gameOverScreen?.classList.add('is-open');
 

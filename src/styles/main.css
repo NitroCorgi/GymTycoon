@@ -242,6 +242,22 @@ body {
   display: grid;
 }
 
+.campaign-victory-screen {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-content: center;
+  justify-items: center;
+  gap: 0.9rem;
+  padding: 1rem;
+  background: rgb(7 12 22 / 72%);
+  z-index: 14;
+}
+
+.campaign-victory-screen.is-open {
+  display: grid;
+}
+
 .selection-screen-content {
   transform: scale(1.25);
   transform-origin: center;
@@ -415,10 +431,25 @@ body {
   color: #a9bdd9;
 }
 
+.campaign-level-option.is-coming-soon .campaign-level-circle {
+  border-color: #475569;
+  background: radial-gradient(circle at 30% 30%, #1c2637 0%, #0f1725 72%);
+  color: #94a3b8;
+}
+
+.campaign-level-option.is-coming-soon .campaign-level-label {
+  color: #7f8ea5;
+}
+
 .campaign-level-option:hover .campaign-level-circle,
 .campaign-level-option:focus-within .campaign-level-circle {
   transform: translateY(-2px);
   border-color: #8cb8ff;
+}
+
+.campaign-level-option.is-coming-soon:hover .campaign-level-circle,
+.campaign-level-option.is-coming-soon:focus-within .campaign-level-circle {
+  border-color: #64748b;
 }
 
 .campaign-level-input:checked + .campaign-level-circle {
@@ -449,6 +480,128 @@ body {
   border-color: #6ea0ff;
   background: #1a2d47;
   transform: translateY(-1px);
+  outline: none;
+}
+
+.campaign-screen-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.campaign-start-btn {
+  border: 1px solid #3b5a82;
+  border-radius: 0.65rem;
+  background: linear-gradient(180deg, #29508b 0%, #203f6e 100%);
+  color: #eff6ff;
+  font-size: 1rem;
+  font-weight: 800;
+  padding: 0.75rem 1.15rem;
+  cursor: not-allowed;
+  opacity: 0.6;
+  transition: transform 120ms ease, opacity 120ms ease, filter 120ms ease;
+}
+
+.campaign-start-btn.is-active {
+  cursor: pointer;
+  opacity: 1;
+}
+
+.campaign-start-btn.is-active:hover,
+.campaign-start-btn.is-active:focus-visible {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+  outline: none;
+}
+
+.campaign-level-details {
+  display: grid;
+}
+
+.campaign-level-details-card {
+  display: grid;
+  gap: 0.55rem;
+  border: 1px solid #314762;
+  border-radius: 0.8rem;
+  background: #0f1828;
+  padding: 0.9rem 1rem;
+}
+
+.campaign-level-details-card h4,
+.campaign-level-details-card h5 {
+  margin: 0;
+  color: #edf4ff;
+}
+
+.campaign-level-details-kicker {
+  margin: 0;
+  color: #8cb8ff;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.campaign-level-details-text,
+.campaign-level-coming-soon {
+  margin: 0;
+  color: #a9bdd9;
+}
+
+.campaign-level-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.campaign-level-stats span {
+  border: 1px solid #29415d;
+  border-radius: 999px;
+  background: #132136;
+  color: #dbe8fb;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.9rem;
+}
+
+.campaign-level-goals-list {
+  margin: 0;
+  padding-left: 1.2rem;
+  color: #dbe8fb;
+}
+
+.campaign-level-goals-list li + li {
+  margin-top: 0.35rem;
+}
+
+.campaign-victory-screen h2 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 2.7rem);
+  color: #e2e8f0;
+}
+
+.campaign-victory-screen p {
+  margin: 0;
+  max-width: 34rem;
+  color: #dbe8fb;
+  text-align: center;
+  font-size: 1.05rem;
+}
+
+#campaign-victory-menu-btn {
+  border: 1px solid #344760;
+  border-radius: 0.65rem;
+  background: #142034;
+  color: #dbe8fb;
+  font-weight: 700;
+  padding: 0.7rem 1rem;
+  cursor: pointer;
+}
+
+#campaign-victory-menu-btn:hover,
+#campaign-victory-menu-btn:focus-visible {
+  border-color: #6ea0ff;
+  background: #1a2d47;
   outline: none;
 }
 
@@ -1130,6 +1283,59 @@ body {
   position: absolute;
   top: 0.9rem;
   right: 0.9rem;
+  display: grid;
+  justify-items: end;
+  gap: 0.5rem;
+}
+
+.campaign-goals-panel {
+  width: min(320px, calc(100vw - 1.8rem));
+  display: none;
+  border: 1px solid #2f435f;
+  border-radius: 0.75rem;
+  background: rgb(11 19 33 / 84%);
+  padding: 0.7rem 0.8rem;
+  box-shadow: 0 10px 24px rgb(2 6 23 / 28%);
+}
+
+.campaign-goals-panel.is-open {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.campaign-goals-panel h3 {
+  margin: 0;
+  color: #dbe8fb;
+  font-size: 0.88rem;
+}
+
+.campaign-goals-list {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.campaign-goal-item {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.campaign-goal-item p {
+  margin: 0;
+  color: #dbe8fb;
+  font-size: 0.8rem;
+}
+
+.campaign-goal-item span {
+  color: #9fb2cd;
+  font-size: 0.74rem;
+}
+
+.campaign-goal-item.is-complete p {
+  color: #86efac;
+}
+
+.campaign-goal-item.is-complete span {
+  color: #bbf7d0;
 }
 
 #tutorial-modal {

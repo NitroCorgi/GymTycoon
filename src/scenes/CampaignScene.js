@@ -1,10 +1,13 @@
+import { CAMPAIGN_LEVELS } from './mainSceneConfig.js';
+
 const DEFAULT_GYM_NAME = 'My Gym';
 const DEFAULT_GYM_COLOR = '#6ea0ff';
 
 export class CampaignScene {
-  constructor({ ui, onReturnToMenu }) {
+  constructor({ ui, onReturnToMenu, onStartLevel }) {
     this.ui = ui;
     this.onReturnToMenu = onReturnToMenu;
+    this.onStartLevel = onStartLevel;
 
     this.selectedGymName = DEFAULT_GYM_NAME;
     this.selectedGymMainColor = DEFAULT_GYM_COLOR;
@@ -13,7 +16,12 @@ export class CampaignScene {
     this.handleGymNameInput = this.handleGymNameInput.bind(this);
     this.handleGymColorInput = this.handleGymColorInput.bind(this);
     this.handleLevelChange = this.handleLevelChange.bind(this);
+    this.handleStartClick = this.handleStartClick.bind(this);
     this.handleBackClick = this.handleBackClick.bind(this);
+  }
+
+  getSelectedLevelConfig() {
+    return CAMPAIGN_LEVELS.find((level) => level.id === this.selectedLevelId) ?? CAMPAIGN_LEVELS[0] ?? null;
   }
 
   sanitizeGymName(value) {
@@ -32,6 +40,7 @@ export class CampaignScene {
     this.ui?.titleScreen?.classList.remove('is-open');
     this.ui?.locationScreen?.classList.remove('is-open');
     this.ui?.gameOverScreen?.classList.remove('is-open');
+    this.ui?.campaignVictoryScreen?.classList.remove('is-open');
     this.ui?.campaignScreen?.classList.add('is-open');
 
     if (this.ui?.campaignGymNameInput instanceof HTMLInputElement) {
@@ -47,9 +56,15 @@ export class CampaignScene {
 
     for (const input of this.ui?.campaignLevelInputs ?? []) {
       input.checked = input.value === this.selectedLevelId;
+      const option = input.closest('.campaign-level-option');
+      const level = CAMPAIGN_LEVELS.find((entry) => entry.id === input.value);
+      option?.classList.toggle('is-coming-soon', !level?.isAvailable);
       input.addEventListener('change', this.handleLevelChange);
     }
 
+    this.renderLevelDetails();
+    this.updateStartButtonState();
+    this.ui?.campaignStartButton?.addEventListener('click', this.handleStartClick);
     this.ui?.campaignBackButton?.addEventListener('click', this.handleBackClick);
   }
 
@@ -68,7 +83,54 @@ export class CampaignScene {
       input.removeEventListener('change', this.handleLevelChange);
     }
 
+    this.ui?.campaignStartButton?.removeEventListener('click', this.handleStartClick);
     this.ui?.campaignBackButton?.removeEventListener('click', this.handleBackClick);
+  }
+
+  renderLevelDetails() {
+    const level = this.getSelectedLevelConfig();
+    const detailsRoot = this.ui?.campaignLevelDetails;
+    if (!(detailsRoot instanceof HTMLElement) || !level) return;
+
+    const goals = level.goals;
+    const goalMarkup = goals
+      ? `
+        <ul class="campaign-level-goals-list">
+          <li>Have €${goals.bank.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')} in bank</li>
+          <li>Reach ${goals.popularityStars} star popularity</li>
+          <li>Have ${goals.members} members</li>
+        </ul>
+      `
+      : '<p class="campaign-level-coming-soon">This level will be added later.</p>';
+
+    detailsRoot.innerHTML = `
+      <article class="campaign-level-details-card">
+        <p class="campaign-level-details-kicker">${level.label}</p>
+        <h4>${level.locationLabel ?? level.label}</h4>
+        <p class="campaign-level-details-text">${level.description ?? ''}</p>
+        ${level.isAvailable ? `
+          <div class="campaign-level-stats">
+            <span>Starting bank: €${level.startingBank.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')}</span>
+            <span>Starting members: ${level.startingMembers ?? 0}</span>
+          </div>
+          <p class="campaign-level-details-text">Same map and customer encounters as Free Mode's home ground floor location.</p>
+          <h5>Goals</h5>
+          ${goalMarkup}
+        ` : `
+          <p class="campaign-level-coming-soon">${level.description ?? 'This level will be added later.'}</p>
+        `}
+      </article>
+    `;
+  }
+
+  updateStartButtonState() {
+    const selectedLevel = this.getSelectedLevelConfig();
+    const canStart = Boolean(selectedLevel?.isAvailable);
+
+    if (this.ui?.campaignStartButton) {
+      this.ui.campaignStartButton.disabled = !canStart;
+      this.ui.campaignStartButton.classList.toggle('is-active', canStart);
+    }
   }
 
   handleGymNameInput(event) {
@@ -89,6 +151,19 @@ export class CampaignScene {
     const input = event.currentTarget;
     if (!(input instanceof HTMLInputElement) || !input.checked) return;
     this.selectedLevelId = input.value;
+    this.renderLevelDetails();
+    this.updateStartButtonState();
+  }
+
+  handleStartClick() {
+    const selectedLevel = this.getSelectedLevelConfig();
+    if (!selectedLevel?.isAvailable) return;
+
+    this.onStartLevel?.({
+      levelId: selectedLevel.id,
+      gymName: this.selectedGymName,
+      gymMainColor: this.selectedGymMainColor
+    });
   }
 
   handleBackClick() {
