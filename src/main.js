@@ -6,6 +6,7 @@ import { MainScene } from './scenes/MainScene.js';
 import { LocationScene } from './scenes/LocationScene.js';
 import { TitleScene } from './scenes/TitleScene.js';
 import { GameOverScene } from './scenes/GameOverScene.js';
+import { CampaignScene } from './scenes/CampaignScene.js';
 import { FREE_MODE_DIFFICULTIES, FREE_MODE_LOCATIONS } from './scenes/mainSceneConfig.js';
 import { getGameUi } from './ui/getGameUi.js';
 
@@ -33,6 +34,13 @@ const mainScene = new MainScene({
 sceneManager.register('main', mainScene);
 sceneManager.register('game-over', gameOverScene);
 sceneManager.register(
+  'campaign',
+  new CampaignScene({
+    ui,
+    onReturnToMenu: () => sceneManager.setActive('title')
+  })
+);
+sceneManager.register(
   'location',
   new LocationScene({
     ui,
@@ -52,6 +60,7 @@ sceneManager.register(
   'title',
   new TitleScene({
     ui,
+    onStartCampaign: () => sceneManager.setActive('campaign'),
     onStartFreeMode: () => sceneManager.setActive('location')
   })
 );

@@ -15,7 +15,7 @@ body,
 }
 
 body {
-  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  font-family: Nunito, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
   background: radial-gradient(circle at top, #182238 0%, #0b0f17 58%);
   color: #e5e7eb;
 }
@@ -226,6 +226,22 @@ body {
   display: grid;
 }
 
+.campaign-screen {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-content: center;
+  justify-items: center;
+  padding: 1rem;
+  overflow: auto;
+  background: rgb(7 12 22 / 62%);
+  z-index: 13;
+}
+
+.campaign-screen.is-open {
+  display: grid;
+}
+
 .selection-screen-content {
   transform: scale(1.25);
   transform-origin: center;
@@ -238,6 +254,13 @@ body {
 }
 
 .location-screen-content {
+  width: min(920px, 100%);
+  display: grid;
+  justify-items: center;
+  gap: 1rem;
+}
+
+.campaign-screen-content {
   width: min(920px, 100%);
   display: grid;
   justify-items: center;
@@ -298,6 +321,135 @@ body {
   margin: 0;
   font-size: clamp(2.25rem, 4vw, 3rem);
   color: #e2e8f0;
+}
+
+.campaign-screen h2 {
+  margin: 0;
+  font-size: clamp(2.25rem, 4vw, 3rem);
+  color: #e2e8f0;
+}
+
+.campaign-selection-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(280px, 0.95fr) minmax(360px, 1.35fr);
+  gap: 0.9rem;
+  align-items: start;
+}
+
+.campaign-level-column {
+  display: grid;
+  gap: 0.75rem;
+  align-content: start;
+  border: 1px solid #344760;
+  border-radius: 0.9rem;
+  background: linear-gradient(180deg, #162238 0%, #101a2c 100%);
+  padding: 1rem 1.1rem;
+}
+
+.campaign-level-column h3 {
+  margin: 0;
+  color: #dbe8fb;
+  font-size: 1.25rem;
+}
+
+.campaign-level-subtitle {
+  margin: 0;
+  color: #9fb4d2;
+  font-size: 0.98rem;
+}
+
+.campaign-level-track {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.9rem;
+  align-items: start;
+  padding-top: 0.4rem;
+}
+
+.campaign-level-track::before {
+  content: '';
+  position: absolute;
+  top: 1.8rem;
+  left: 8%;
+  right: 8%;
+  height: 0.24rem;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #355277 0%, #6ea0ff 100%);
+  opacity: 0.7;
+}
+
+.campaign-level-option {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  color: #dbe8fb;
+  cursor: pointer;
+}
+
+.campaign-level-input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.campaign-level-circle {
+  width: 3.6rem;
+  height: 3.6rem;
+  display: grid;
+  place-items: center;
+  border: 2px solid #4b6487;
+  border-radius: 999px;
+  background: radial-gradient(circle at 30% 30%, #223657 0%, #142034 70%);
+  color: #dbe8fb;
+  font-size: 1.2rem;
+  font-weight: 800;
+  transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+
+.campaign-level-label {
+  font-size: 0.95rem;
+  color: #a9bdd9;
+}
+
+.campaign-level-option:hover .campaign-level-circle,
+.campaign-level-option:focus-within .campaign-level-circle {
+  transform: translateY(-2px);
+  border-color: #8cb8ff;
+}
+
+.campaign-level-input:checked + .campaign-level-circle {
+  border-color: #8cb8ff;
+  box-shadow: 0 0 0 4px rgb(110 160 255 / 18%);
+  background: radial-gradient(circle at 30% 30%, #7eb0ff 0%, #31548c 72%);
+}
+
+.campaign-level-input:checked + .campaign-level-circle + .campaign-level-label {
+  color: #edf4ff;
+  font-weight: 700;
+}
+
+.campaign-back-btn {
+  border: 1px solid #344760;
+  border-radius: 0.65rem;
+  background: #142034;
+  color: #dbe8fb;
+  font-size: 1rem;
+  font-weight: 700;
+  padding: 0.75rem 1.1rem;
+  cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
+}
+
+.campaign-back-btn:hover,
+.campaign-back-btn:focus-visible {
+  border-color: #6ea0ff;
+  background: #1a2d47;
+  transform: translateY(-1px);
+  outline: none;
 }
 
 .location-selection-grid {
@@ -484,6 +636,28 @@ body {
   border-color: #475569;
   color: #94a3b8;
   cursor: not-allowed;
+}
+
+.title-screen-actions button:hover,
+.title-screen-actions button:focus-visible {
+  border-color: #6ea0ff;
+  background: #1a2d47;
+  outline: none;
+}
+
+@media (max-width: 860px) {
+  .campaign-selection-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .campaign-level-track {
+    gap: 0.55rem;
+  }
+
+  .campaign-level-circle {
+    width: 3rem;
+    height: 3rem;
+  }
 }
 
 #app.is-title-screen .topbar,
@@ -954,15 +1128,15 @@ body {
 
 .guide-dock {
   position: absolute;
-  left: 0.9rem;
-  bottom: 0.9rem;
+  top: 0.9rem;
+  right: 0.9rem;
 }
 
 #tutorial-modal {
   position: absolute;
   inset: auto;
-  left: 0.9rem;
-  bottom: 4.3rem;
+  top: 4.3rem;
+  right: 0.9rem;
   z-index: 8;
   background: transparent;
   pointer-events: none;
@@ -1026,8 +1200,16 @@ body {
 .tutorial-message-text {
   margin: 0;
   color: #dbe8fb;
-  line-height: 1.5;
-  font-size: 0.92rem;
+  line-height: 1.6;
+  font-size: 1.15rem;
+}
+
+.tutorial-message-card .stats-modal-header {
+  justify-content: center;
+}
+
+.tutorial-message-card .stats-modal-header h2 {
+  font-size: 1.5rem;
 }
 
 .bottom-bar-controls {

@@ -1,11 +1,3 @@
-import treadmillRotation0 from '../assets/devices/treadmill/treadmill-r0.png';
-import treadmillRotation1 from '../assets/devices/treadmill/treadmill-r1.png';
-import treadmillRotation2 from '../assets/devices/treadmill/treadmill-r2.png';
-import treadmillRotation3 from '../assets/devices/treadmill/treadmill-r3.png';
-import ellipticalRotation0 from '../assets/devices/elliptical/elliptical-r0.png';
-import ellipticalRotation1 from '../assets/devices/elliptical/elliptical-r1.png';
-import ellipticalRotation2 from '../assets/devices/elliptical/elliptical-r2.png';
-import ellipticalRotation3 from '../assets/devices/elliptical/elliptical-r3.png';
 import dumbbellStationRotation1 from '../assets/devices/dumbbellStation/dumbbellStation-r1.png';
 import benchPressRotation1 from '../assets/devices/benchPress/benchPress-r1.png';
 import battleRopesRotation1 from '../assets/devices/battleRopes/battleRopes-r1.png';
@@ -81,13 +73,7 @@ export const ITEM_CATALOG = {
     color: '#38bdf8',
     assetGroundScale: 1,
     assetOffsetXByRotation: [-0.07, -0.02, 0, 0],
-    assetOffsetYByRotation: [0.03, 0.03, 0.03, 0.03],
-    assetRotations: [
-      treadmillRotation0,
-      treadmillRotation1,
-      treadmillRotation2,
-      treadmillRotation3
-    ]
+    assetOffsetYByRotation: [0.03, 0.03, 0.03, 0.03]
   },
   legPress: {
     label: 'Leg Press',
@@ -124,13 +110,7 @@ export const ITEM_CATALOG = {
     popularity: 3,
     initialBreakChance: 0.05,
     color: '#22d3ee',
-    assetGroundScale: 1,
-    assetRotations: [
-      ellipticalRotation0,
-      ellipticalRotation1,
-      ellipticalRotation2,
-      ellipticalRotation3
-    ]
+    assetGroundScale: 1
   },
   latPulldown: {
     label: 'Lat Pulldown',
@@ -441,8 +421,8 @@ export const FREE_MODE_LOCATIONS = [
     ],
     entranceTile: { row: 2, col: 0 },
     monthlyRent: 200,
-    monthlyEncountersBase: 5,
-    monthlyEncountersGrowth: 1
+    dailyEncountersBase: 5,
+    dailyEncountersGrowth: 1
   },
   {
     id: 'small-rural',
@@ -459,8 +439,8 @@ export const FREE_MODE_LOCATIONS = [
     ],
     entranceTile: { row: 3, col: 0 },
     monthlyRent: 500,
-    monthlyEncountersBase: 10,
-    monthlyEncountersGrowth: 1
+    dailyEncountersBase: 10,
+    dailyEncountersGrowth: 1
   },
   {
     id: 'medium-suburban',
@@ -477,8 +457,8 @@ export const FREE_MODE_LOCATIONS = [
     ],
     entranceTile: { row: 5, col: 0 },
     monthlyRent: 1500,
-    monthlyEncountersBase: 20,
-    monthlyEncountersGrowth: 2
+    dailyEncountersBase: 20,
+    dailyEncountersGrowth: 2
   },
   {
     id: 'downtown-prime',
@@ -501,8 +481,8 @@ export const FREE_MODE_LOCATIONS = [
     ],
     entranceTile: { row: 5, col: 0 },
     monthlyRent: 3000,
-    monthlyEncountersBase: 30,
-    monthlyEncountersGrowth: 3
+    dailyEncountersBase: 30,
+    dailyEncountersGrowth: 3
   }
 ];
 

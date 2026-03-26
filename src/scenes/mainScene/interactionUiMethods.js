@@ -1075,10 +1075,12 @@ export const interactionUiMethods = {
     if (statKey === 'monthly-costs') {
       const itemMonthlyCosts = this.items.reduce((sum, item) => sum + (ITEM_CATALOG[item.key].monthlyCost ?? 0), 0);
       const upgradeMonthlyCosts = this.getPurchasedGymUpgradeMonthlyCost();
+      const staffMonthlyCosts = this.getStaffMonthlyCosts?.() ?? 0;
       this.renderPieChart(bodyElement, [
         { label: 'Rent', value: this.rentAmount, color: '#6ea0ff' },
         { label: 'Devices/Facilities', value: itemMonthlyCosts, color: '#34d399' },
-        { label: 'Upgrades', value: upgradeMonthlyCosts, color: '#f97316' }
+        { label: 'Upgrades', value: upgradeMonthlyCosts, color: '#f97316' },
+        { label: 'Staff', value: staffMonthlyCosts, color: '#e879f9' }
       ]);
       return;
     }

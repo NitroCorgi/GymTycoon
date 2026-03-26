@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gym Tycoon</title>
     <meta name="description" content="Gym Tycoon browser game starter" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
   </head>
   <body>
     <div id="app">
@@ -68,9 +71,107 @@
           <div class="selection-screen-content title-screen-content">
             <h1>Gym Tycoon</h1>
             <div class="title-screen-actions">
-              <button id="campaign-btn" type="button" disabled>Campaign</button>
+              <button id="campaign-btn" type="button">Campaign</button>
               <button id="free-mode-btn" type="button">Free Mode</button>
             </div>
+          </div>
+        </section>
+
+        <section id="campaign-screen" class="campaign-screen" aria-label="Campaign setup screen">
+          <div class="selection-screen-content campaign-screen-content">
+            <h2>Campaign Setup</h2>
+            <div class="campaign-selection-grid">
+              <div class="location-selection-column" role="group" aria-label="Campaign gym profile settings">
+                <h3>Gym Profile</h3>
+                <div class="location-custom-fields">
+                  <label class="location-field" for="campaign-gym-name-input">
+                    <span class="location-field-label">Your Gym Name</span>
+                    <input
+                      id="campaign-gym-name-input"
+                      class="location-field-input"
+                      type="text"
+                      maxlength="24"
+                      value="My Gym"
+                      placeholder="My Gym"
+                      aria-label="Campaign gym name"
+                    />
+                    <span class="location-option-meta">Max 24 characters</span>
+                  </label>
+
+                  <label class="location-field" for="campaign-gym-color-input">
+                    <span class="location-field-label">Your gym main color</span>
+                    <input
+                      id="campaign-gym-color-input"
+                      class="location-color-input"
+                      type="color"
+                      value="#6ea0ff"
+                      aria-label="Campaign gym main color"
+                    />
+                  </label>
+                </div>
+              </div>
+
+              <div class="campaign-level-column" role="group" aria-label="Campaign level selection">
+                <h3>Level Selection</h3>
+                <p class="campaign-level-subtitle">Choose a starting level. Gameplay for these levels will be added later.</p>
+                <div class="campaign-level-track" aria-label="Available campaign levels">
+                  <label class="campaign-level-option" for="campaign-level-1">
+                    <input
+                      id="campaign-level-1"
+                      class="campaign-level-input"
+                      type="radio"
+                      name="campaign-level"
+                      value="level-1"
+                      data-campaign-level-option
+                      checked
+                    />
+                    <span class="campaign-level-circle">1</span>
+                    <span class="campaign-level-label">Level 1</span>
+                  </label>
+
+                  <label class="campaign-level-option" for="campaign-level-2">
+                    <input
+                      id="campaign-level-2"
+                      class="campaign-level-input"
+                      type="radio"
+                      name="campaign-level"
+                      value="level-2"
+                      data-campaign-level-option
+                    />
+                    <span class="campaign-level-circle">2</span>
+                    <span class="campaign-level-label">Level 2</span>
+                  </label>
+
+                  <label class="campaign-level-option" for="campaign-level-3">
+                    <input
+                      id="campaign-level-3"
+                      class="campaign-level-input"
+                      type="radio"
+                      name="campaign-level"
+                      value="level-3"
+                      data-campaign-level-option
+                    />
+                    <span class="campaign-level-circle">3</span>
+                    <span class="campaign-level-label">Level 3</span>
+                  </label>
+
+                  <label class="campaign-level-option" for="campaign-level-4">
+                    <input
+                      id="campaign-level-4"
+                      class="campaign-level-input"
+                      type="radio"
+                      name="campaign-level"
+                      value="level-4"
+                      data-campaign-level-option
+                    />
+                    <span class="campaign-level-circle">4</span>
+                    <span class="campaign-level-label">Level 4</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <button id="campaign-back-btn" class="campaign-back-btn" type="button">Back to Main Menu</button>
           </div>
         </section>
 
@@ -93,7 +194,7 @@
                       <span class="location-option-title">Empty room in your home's ground floor</span>
                       <span class="location-option-meta">Map: 6x6</span>
                       <span class="location-option-meta">Rent: 200 EUR / month</span>
-                      <span class="location-option-meta">~5 customer encounters / month (+1 per month)</span>
+                      <span class="location-option-meta">~5 customer encounters / day (+1 per month)</span>
                     </span>
                   </label>
 
@@ -109,7 +210,7 @@
                       <span class="location-option-title">Small Property in rural area</span>
                       <span class="location-option-meta">Map: 8x8</span>
                       <span class="location-option-meta">Rent: $500 / month</span>
-                      <span class="location-option-meta">~10 customer encounters / month (+1 per month)</span>
+                      <span class="location-option-meta">~10 customer encounters / day (+1 per month)</span>
                     </span>
                   </label>
                   <label class="location-option" for="location-medium-suburban">
@@ -124,7 +225,7 @@
                       <span class="location-option-title">Medium Property in suburban district</span>
                       <span class="location-option-meta">Map: 12x10</span>
                       <span class="location-option-meta">Rent: $1,500 / month</span>
-                      <span class="location-option-meta">~20 customer encounters / month (+2 per month)</span>
+                      <span class="location-option-meta">~20 customer encounters / day (+2 per month)</span>
                     </span>
                   </label>
                   <label class="location-option" for="location-downtown-prime">
@@ -139,7 +240,7 @@
                       <span class="location-option-title">Downtown property in prime location</span>
                       <span class="location-option-meta">Map: L-shaped (10x12 + 3x5)</span>
                       <span class="location-option-meta">Rent: $3,000 / month</span>
-                      <span class="location-option-meta">~30 customer encounters / month (+3 per month)</span>
+                      <span class="location-option-meta">~30 customer encounters / day (+3 per month)</span>
                     </span>
                   </label>
                 </div>
@@ -298,7 +399,7 @@
         <section id="tutorial-modal" class="stats-modal" aria-label="Guide checklist" aria-hidden="true">
           <article class="stats-modal-card tutorial-modal-card">
             <header class="stats-modal-header">
-              <h2>Guide Checklist</h2>
+              <h2 id="tutorial-modal-title">Guide Checklist</h2>
               <button id="tutorial-modal-close-btn" type="button" aria-label="Close guide">✕</button>
             </header>
             <div id="tutorial-checklist-body" class="stats-modal-body tutorial-checklist-body"></div>
@@ -312,10 +413,10 @@
               <button id="tutorial-welcome-close-btn" type="button" aria-label="Close welcome">✕</button>
             </header>
             <p class="tutorial-message-text">
-              Welcome to Gym Tycoon! To get started, you need a check-in, lockers, and devices. The more devices
-              you have, the higher your popularity. The more popular you are, the more people come into the gym. If
-              they are satisfied with your gym, they will subscribe to a membership! Click the Guide Button on the
-              bottom left if you are stuck.
+              Welcome to Gym Tycoon Free Mode! To get started, you need a check-in, lockers, and devices. The more
+              devices you have, the higher your popularity. The more popular you are, the more people come into the
+              gym. If they are satisfied with your gym, they will subscribe to a membership! Click the Guide Button
+              on the bottom left to see some tasks to guide you.
             </p>
           </article>
         </section>

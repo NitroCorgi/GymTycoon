@@ -219,10 +219,29 @@ export const layoutRenderMethods = {
     context.restore();
   },
 
+  getWeeklyOpenHours() {
+    if (!this.openingHoursSchedule?.getHoursForWeekday) {
+      return 24 * 7;
+    }
+
+    let totalOpenHours = 0;
+    for (let weekday = 0; weekday < 7; weekday += 1) {
+      const { openHour = 0, closeHour = 24 } = this.openingHoursSchedule.getHoursForWeekday(weekday);
+      totalOpenHours += Math.max(0, closeHour - openHour);
+    }
+
+    return totalOpenHours;
+  },
+
+  getStaffMonthlyCosts() {
+    const staffCostPerHour = this.getStaffCostPerHour?.() ?? 0;
+    return staffCostPerHour * this.getWeeklyOpenHours();
+  },
+
   getMonthlyCosts() {
     const itemMonthlyCosts = this.items.reduce((sum, item) => sum + (ITEM_CATALOG[item.key].monthlyCost ?? 0), 0);
     const upgradeMonthlyCosts = this.getPurchasedGymUpgradeMonthlyCost?.() ?? 0;
-    const staffMonthlyCosts = (this.getStaffCostPerHour?.() ?? 0) * 24 * 7;
+    const staffMonthlyCosts = this.getStaffMonthlyCosts?.() ?? 0;
     return this.rentAmount + itemMonthlyCosts + upgradeMonthlyCosts + staffMonthlyCosts;
   },
 
@@ -566,7 +585,7 @@ export const layoutRenderMethods = {
     context.translate(labelX, labelY);
     context.rotate(-Math.PI / 6);
     context.globalAlpha = 0.5;
-    context.font = `900 ${fontSize}px Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif`;
+    context.font = `900 ${fontSize}px Nunito, system-ui, -apple-system, Segoe UI, Roboto, sans-serif`;
     context.textAlign = 'center';
     context.textBaseline = 'middle';
     context.fillStyle = '#f8fafc';

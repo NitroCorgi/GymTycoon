@@ -128,8 +128,9 @@ export class MainScene {
     this.money = selectedDifficulty.startingBank ?? 50000;
     this.subscriptionFee = 30;
     this.rentAmount = selectedLocation.monthlyRent ?? 1000;
-    this.monthlyEncountersBase = selectedLocation.monthlyEncountersBase ?? 20;
-    this.monthlyEncountersGrowth = selectedLocation.monthlyEncountersGrowth ?? 1;
+    this.dailyEncountersBase = selectedLocation.dailyEncountersBase ?? selectedLocation.monthlyEncountersBase ?? 20;
+    this.dailyEncountersGrowth =
+      selectedLocation.dailyEncountersGrowth ?? selectedLocation.monthlyEncountersGrowth ?? 1;
     this.elapsedMonths = 0;
 
     this.lastCycleIncome = 0;
@@ -179,6 +180,7 @@ export class MainScene {
     this.nextPersonId = 1;
     this.currentExpectedArrivalsPerInGameMinute = 0;
     this.currentWeatherState = { type: WEATHER_TYPES.CLOUDY, temperatureC: 12 };
+    this.dailyArrivalPlan = null;
 
     this.hoveredTile = null;
     this.hoveredWallSegment = null;
@@ -226,6 +228,7 @@ export class MainScene {
     this.initializeSimulationSystems(selectedLocation);
     this.refreshCurrentWeather();
     this.syncCalendarFromTimeKeeper();
+  this.resetDailyArrivalPlan();
 
     this.buildBuyPanelButtons();
     this.recordMonthlyMetricsSnapshot(this.getCurrentMonthLabel());
@@ -250,6 +253,7 @@ export class MainScene {
     this.timeKeeper.on(TimeKeeper.Events.DAY_START, () => {
       this.syncCalendarFromTimeKeeper();
       this.refreshCurrentWeather();
+      this.resetDailyArrivalPlan();
     });
 
     this.timeKeeper.on(TimeKeeper.Events.MONTH_END, () => {
@@ -1002,10 +1006,13 @@ export class MainScene {
     if (!checklistBody) return;
 
     const progress = this.getTutorialProgressState();
-    const visibleStages = progress.stages.slice(0, this.tutorialUnlockedStageCount);
+    const currentStageIndex = progress.stages.findIndex((stage) => !stage.complete);
+    const resolvedStageIndex = currentStageIndex === -1 ? Math.max(0, progress.stages.length - 1) : currentStageIndex;
+    const currentStage = progress.stages[resolvedStageIndex];
+    const modalTitle = currentStage ? `${currentStage.title} (Level ${resolvedStageIndex + 1})` : 'Guide Checklist';
     const renderKey = JSON.stringify({
-      visibleStages,
-      unlocked: this.tutorialUnlockedStageCount
+      stage: currentStage,
+      title: modalTitle
     });
 
     if (renderKey === this.tutorialRenderStateKey) {
@@ -1013,29 +1020,30 @@ export class MainScene {
     }
 
     this.tutorialRenderStateKey = renderKey;
+    if (this.ui?.tutorialModalTitle) {
+      this.ui.tutorialModalTitle.textContent = modalTitle;
+    }
     checklistBody.innerHTML = '';
 
-    for (const stage of visibleStages) {
-      const stageBlock = document.createElement('article');
-      stageBlock.className = 'tutorial-checklist-stage';
-
-      const stageTitle = document.createElement('h3');
-      stageTitle.textContent = stage.title;
-      stageBlock.appendChild(stageTitle);
-
-      const list = document.createElement('div');
-      list.className = 'tutorial-checklist-items';
-
-      for (const item of stage.items) {
-        const row = document.createElement('p');
-        row.className = `tutorial-checklist-item${item.complete ? ' is-complete' : ''}`;
-        row.textContent = `${item.complete ? '☑' : '☐'} ${item.label}`;
-        list.appendChild(row);
-      }
-
-      stageBlock.appendChild(list);
-      checklistBody.appendChild(stageBlock);
+    if (!currentStage) {
+      return;
     }
+
+    const stageBlock = document.createElement('article');
+    stageBlock.className = 'tutorial-checklist-stage';
+
+    const list = document.createElement('div');
+    list.className = 'tutorial-checklist-items';
+
+    for (const item of currentStage.items) {
+      const row = document.createElement('p');
+      row.className = `tutorial-checklist-item${item.complete ? ' is-complete' : ''}`;
+      row.textContent = `${item.complete ? '☑' : '☐'} ${item.label}`;
+      list.appendChild(row);
+    }
+
+    stageBlock.appendChild(list);
+    checklistBody.appendChild(stageBlock);
   }
 
   getAvailableTypesForTab() {
@@ -1134,29 +1142,7 @@ export class MainScene {
     this.syncCalendarFromTimeKeeper();
 
     const dateTime = this.timeKeeper.getCurrentDateTimeStruct();
-    const isOpen = this.openingHoursSchedule.isOpen(dateTime);
-    const weatherMultiplier =
-      SIMULATION_DEFAULTS.weather.demandMultiplierByType[this.currentWeatherState?.type] ?? 1;
-    const gymReputationMultiplier = this.getGymReputationDemandMultiplier();
-    const priceMultiplier = this.getPriceDemandMultiplier();
-    const baseDemandPerMinute = this.getBaseDemandPerInGameMinute();
-
-    this.currentExpectedArrivalsPerInGameMinute = this.demandModel.computeExpectedArrivalsPerInGameMinute({
-      isOpen,
-      weekday: dateTime.weekday,
-      hour: dateTime.timeOfDayHours,
-      month: dateTime.month,
-      weatherMultiplier,
-      baseDemandPerMinute,
-      gymReputationMultiplier,
-      priceMultiplier
-    });
-
-    if (isOpen) {
-      this.arrivalSpawner.update(deltaSeconds, this.currentExpectedArrivalsPerInGameMinute, () => {
-        return this.spawnIncomingPerson(mapLayout);
-      });
-    }
+    this.updateScheduledArrivals(deltaSeconds, dateTime, mapLayout);
 
     this.updateBrokenDevices(deltaSeconds);
     this.updatePeople(deltaSeconds, mapLayout);
@@ -1260,11 +1246,156 @@ export class MainScene {
     }
   }
 
-  chooseIncomingVisitorProfile() {
-    const shouldSpawnMember =
-      this.memberProfiles.length > 0 && Math.random() < this.getReturningMemberVisitChance();
+  createArrivalQuotaState() {
+    return {
+      newCustomers: 0,
+      members: 0
+    };
+  }
 
-    if (shouldSpawnMember) {
+  getDateKey(dateTime) {
+    return `${dateTime.year}-${dateTime.month}-${dateTime.dayInMonth}`;
+  }
+
+  getDailyNewCustomerTarget() {
+    return Math.max(0, Math.floor(this.dailyEncountersBase + this.dailyEncountersGrowth * this.elapsedMonths));
+  }
+
+  getDailyReturningMemberTarget() {
+    return Math.max(0, Math.round(this.memberProfiles.length * 0.25));
+  }
+
+  getTotalDayMinutes() {
+    return 24 * 60;
+  }
+
+  getRemainingDayMinutes(dateTime) {
+    const elapsedMinutes = Math.max(0, Math.floor((dateTime.timeOfDayHours ?? 0) * 60 + (dateTime.minute ?? 0)));
+    return Math.max(1, this.getTotalDayMinutes() - elapsedMinutes);
+  }
+
+  resetDailyArrivalPlan() {
+    if (!this.timeKeeper) {
+      this.dailyArrivalPlan = null;
+      return;
+    }
+
+    const dateTime = this.timeKeeper.getCurrentDateTimeStruct();
+    this.dailyArrivalPlan = {
+      dayKey: this.getDateKey(dateTime),
+      weekday: dateTime.weekday,
+      targets: {
+        newCustomers: this.getDailyNewCustomerTarget(),
+        members: this.getDailyReturningMemberTarget()
+      },
+      spawned: this.createArrivalQuotaState(),
+      credits: this.createArrivalQuotaState(),
+      totalDayMinutes: this.getTotalDayMinutes()
+    };
+    this.currentExpectedArrivalsPerInGameMinute = 0;
+    this.arrivalSpawner.reset();
+  }
+
+  getRemainingArrivalQuota(type) {
+    if (!this.dailyArrivalPlan) {
+      return 0;
+    }
+
+    return Math.max(0, this.dailyArrivalPlan.targets[type] - this.dailyArrivalPlan.spawned[type]);
+  }
+
+  getNextScheduledVisitorType() {
+    if (!this.dailyArrivalPlan) {
+      return null;
+    }
+
+    const epsilon = 1e-6;
+    const availableTypes = ['newCustomers', 'members'].filter((type) => {
+      return this.getRemainingArrivalQuota(type) > 0 && this.dailyArrivalPlan.credits[type] >= 1 - epsilon;
+    });
+
+    if (availableTypes.length === 0) {
+      return null;
+    }
+
+    availableTypes.sort((left, right) => {
+      const creditDifference = this.dailyArrivalPlan.credits[right] - this.dailyArrivalPlan.credits[left];
+      if (Math.abs(creditDifference) > epsilon) {
+        return creditDifference;
+      }
+
+      return this.getRemainingArrivalQuota(right) - this.getRemainingArrivalQuota(left);
+    });
+
+    return availableTypes[0];
+  }
+
+  getScheduledArrivalsPerInGameMinute(dateTime) {
+    const remainingNewCustomers = this.getRemainingArrivalQuota('newCustomers');
+    const remainingMembers = this.getRemainingArrivalQuota('members');
+    const remainingArrivals = remainingNewCustomers + remainingMembers;
+    if (remainingArrivals <= 0) {
+      return 0;
+    }
+
+    const remainingDayMinutes = this.getRemainingDayMinutes(dateTime);
+    return remainingArrivals / Math.max(1, remainingDayMinutes);
+  }
+
+  updateScheduledArrivals(deltaSeconds, dateTime, mapLayout) {
+    if (!this.dailyArrivalPlan || this.dailyArrivalPlan.dayKey !== this.getDateKey(dateTime)) {
+      this.resetDailyArrivalPlan();
+    }
+
+    if (!this.dailyArrivalPlan) {
+      this.currentExpectedArrivalsPerInGameMinute = 0;
+      return 0;
+    }
+
+    const inGameMinutesElapsed = deltaSeconds * SIMULATION_DEFAULTS.arrivals.inGameMinutesPerRealSecond;
+    const totalDayMinutes = Math.max(1, this.dailyArrivalPlan.totalDayMinutes);
+
+    for (const type of ['newCustomers', 'members']) {
+      const remainingQuota = this.getRemainingArrivalQuota(type);
+      if (remainingQuota <= 0) {
+        this.dailyArrivalPlan.credits[type] = 0;
+        continue;
+      }
+
+      const targetForDay = this.dailyArrivalPlan.targets[type];
+      this.dailyArrivalPlan.credits[type] += (targetForDay * inGameMinutesElapsed) / totalDayMinutes;
+      this.dailyArrivalPlan.credits[type] = Math.min(this.dailyArrivalPlan.credits[type], remainingQuota);
+    }
+
+    this.currentExpectedArrivalsPerInGameMinute = this.getScheduledArrivalsPerInGameMinute(dateTime);
+
+    const maxSpawnsThisTick = Math.max(
+      0,
+      Math.ceil((this.arrivalSpawner?.config.maxArrivalsPerRealSecond ?? 10) * deltaSeconds)
+    );
+
+    let spawned = 0;
+    while (spawned < maxSpawnsThisTick) {
+      const visitorType = this.getNextScheduledVisitorType();
+      if (!visitorType) {
+        break;
+      }
+
+      const didSpawn = this.spawnIncomingPerson(mapLayout, visitorType);
+      if (didSpawn === false) {
+        break;
+      }
+
+      this.dailyArrivalPlan.spawned[visitorType] += 1;
+      this.dailyArrivalPlan.credits[visitorType] = Math.max(0, this.dailyArrivalPlan.credits[visitorType] - 1);
+      spawned += 1;
+    }
+
+    return spawned;
+  }
+
+  chooseIncomingVisitorProfile(visitorType = 'newCustomers') {
+    if (visitorType === 'members' && this.memberProfiles.length > 0) {
       const randomIndex = Math.floor(Math.random() * this.memberProfiles.length);
       return {
         memberProfile: this.memberProfiles[randomIndex],
@@ -1276,12 +1407,6 @@ export class MainScene {
       memberProfile: null,
       isMember: false
     };
-  }
-
-  getBaseDemandPerInGameMinute() {
-    const monthTarget = Math.max(1, this.monthlyEncountersBase + this.monthlyEncountersGrowth * this.elapsedMonths);
-    const minutesPerMonth = SIMULATION_DEFAULTS.time.daysPerMonth * 24 * 60;
-    return monthTarget / minutesPerMonth;
   }
 
   getGymReputationDemandMultiplier() {
@@ -1344,8 +1469,8 @@ export class MainScene {
     }
   }
 
-  spawnIncomingPerson(mapLayout) {
-    const incomingVisitor = this.chooseIncomingVisitorProfile();
+  spawnIncomingPerson(mapLayout, visitorType = 'newCustomers') {
+    const incomingVisitor = this.chooseIncomingVisitorProfile(visitorType);
     if (!incomingVisitor) {
       return false;
     }
