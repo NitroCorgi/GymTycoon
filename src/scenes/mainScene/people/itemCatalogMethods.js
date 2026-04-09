@@ -146,6 +146,12 @@ export const itemCatalogMethods = {
     }, null);
   },
 
+  hasRequiredCheckInFlow() {
+    const hasReceptionDesk = this.items.some((item) => item.key === 'receptionDesk');
+    const hasTurnstile = this.items.some((item) => item.key === 'turnstile');
+    return hasReceptionDesk && hasTurnstile;
+  },
+
   findFreeShowerItem() {
     const freeShowers = this.items.filter(
       (item) => ITEM_CATALOG[item.key].type === 'shower' && item.occupiedByPersonId === null

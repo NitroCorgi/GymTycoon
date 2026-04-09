@@ -1408,6 +1408,35 @@ body {
   color: #dbe8fb;
   line-height: 1.6;
   font-size: 1.15rem;
+  min-height: 7.2rem;
+}
+
+.tutorial-message-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+#tutorial-welcome-next-btn {
+  border: 1px solid #3f79d9;
+  border-radius: 0.55rem;
+  background: linear-gradient(180deg, #2f5fb6 0%, #244887 100%);
+  color: #f4f8ff;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+}
+
+#tutorial-welcome-next-btn:hover,
+#tutorial-welcome-next-btn:focus-visible {
+  border-color: #6ea0ff;
+  background: linear-gradient(180deg, #3b72d8 0%, #2b57a3 100%);
+}
+
+#tutorial-welcome-next-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .tutorial-message-card .stats-modal-header {

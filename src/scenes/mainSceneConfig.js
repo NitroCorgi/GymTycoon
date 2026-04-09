@@ -488,8 +488,8 @@ export const FREE_MODE_LOCATIONS = [
 
 export const FREE_MODE_DIFFICULTIES = [
   {
-    id: 'sanbox',
-    label: 'Sanbox',
+    id: 'sandbox',
+    label: 'Sandbox',
     startingBank: 9999999
   },
   {
@@ -519,6 +519,12 @@ export const CAMPAIGN_LEVELS = [
     startingMembers: 0,
     isAvailable: true,
     description: 'Turn the empty room in your home into the first profitable gym in your campaign.',
+    introDialoguePages: [
+      'Welcome to Gym Tycoon. You got this empty room in your home, and your mission is to turn it into a profitable gym.',
+      "Each gym needs the following three things: a check-in method (either reception or turnstile), lockers for storing people's goods, and of course: training equipment. Go into Buy Mode and equip your gym with the essentials!",
+      'The more equipment your gym has, the higher its popularity. The higher the popularity, the higher you can set the price without reducing customer satisfaction.',
+      'You can take a loan of up to 50,000 EUR if you need more money to equip the gym. I suggest gathering a good amount of members first before thinking of profit.'
+    ],
     goals: {
       bank: 20000,
       popularityStars: 2,
@@ -534,6 +540,12 @@ export const CAMPAIGN_LEVELS = [
     startingMembers: 100,
     isAvailable: true,
     description: 'Expand beyond your home gym and prove you can grow steadily in a rural market.',
+    introDialoguePages: [
+      "You have made it into the next propoerty that's for rent! And all your members have followed you into the new location!",
+      'Now it is time to increase the membership base and the equipment of your gym.',
+      'Also, we should make more profit.',
+      'Under "Gym Upgrades" you can buy things such as ventilation or maintenance technicians that will help achieve your goals.'
+    ],
     goals: {
       bank: 50000,
       popularityStars: 3,
@@ -550,6 +562,12 @@ export const CAMPAIGN_LEVELS = [
     startingMembers: 250,
     isAvailable: true,
     description: 'Scale up in the suburbs by running a larger gym around the clock while keeping members happy.',
+    introDialoguePages: [
+      'You expanded your gym again! Your members have remained from the previous location.',
+      'Now we need to establish our gym as a 24/7 institution for all workout fans out there.',
+      "Under Gym Administration you can set the Opening Hours of the gym. It should be open around the clock. Of course, you need to pay the staff for every hour you're open.",
+      'Also, we should place some vending machines to make some profit on the side. They are in Buy Mode under "Facilities".'
+    ],
     goals: {
       bank: 100000,
       popularityStars: 4,
@@ -568,6 +586,10 @@ export const CAMPAIGN_LEVELS = [
     startingMembers: 600,
     isAvailable: true,
     description: 'Master the busiest market by running a premium 24/7 gym and hitting elite growth targets.',
+    introDialoguePages: [
+      'You have made it into the biggest space available for rent. Now it is time to assert market dominance.',
+      'Get even more members and profit to show everyone which gym is the number 1!'
+    ],
     goals: {
       bank: 1000000,
       popularityStars: 5,

@@ -158,6 +158,12 @@ export const lifecycleMethods = {
   },
 
   handleEnteredGym(person, mapLayout) {
+    if (!this.isGymOpenAt()) {
+      this.redirectPersonFromClosedEntrance(person, mapLayout);
+      return;
+    }
+
+    person.hasEnteredGym = true;
     this.initializeVisitSatisfaction(person);
     person.canSubscribe = true;
     person.unhappy = false;

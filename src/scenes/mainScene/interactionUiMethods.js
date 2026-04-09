@@ -845,6 +845,8 @@ export const interactionUiMethods = {
       tutorialModal,
       tutorialChecklistBody,
       tutorialWelcomeModal,
+      tutorialWelcomeText,
+      tutorialWelcomeNextButton,
       tutorialCompleteModal
     } = this.ui;
 
@@ -1013,9 +1015,24 @@ export const interactionUiMethods = {
       tutorialModal.setAttribute('aria-hidden', this.tutorialVisible ? 'false' : 'true');
     }
 
-    tutorialWelcomeModal?.classList.toggle('is-open', this.tutorialWelcomeVisible);
+    const currentWelcomeText = this.getCurrentTutorialWelcomePageText();
+    const resolvedTypedLength = Math.max(0, Math.min(this.tutorialWelcomeTypedLength, currentWelcomeText.length));
+    const shouldShowWelcomeDialog = this.tutorialWelcomeVisible && currentWelcomeText.length > 0;
+
+    if (tutorialWelcomeText) {
+      tutorialWelcomeText.textContent = shouldShowWelcomeDialog
+        ? currentWelcomeText.slice(0, resolvedTypedLength)
+        : '';
+    }
+
+    if (tutorialWelcomeNextButton) {
+      tutorialWelcomeNextButton.disabled = !shouldShowWelcomeDialog;
+      tutorialWelcomeNextButton.textContent = 'NEXT';
+    }
+
+    tutorialWelcomeModal?.classList.toggle('is-open', shouldShowWelcomeDialog);
     if (tutorialWelcomeModal) {
-      tutorialWelcomeModal.setAttribute('aria-hidden', this.tutorialWelcomeVisible ? 'false' : 'true');
+      tutorialWelcomeModal.setAttribute('aria-hidden', shouldShowWelcomeDialog ? 'false' : 'true');
     }
 
     tutorialCompleteModal?.classList.toggle('is-open', this.tutorialCompleteVisible);

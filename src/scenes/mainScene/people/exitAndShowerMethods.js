@@ -180,8 +180,13 @@ export const exitAndShowerMethods = {
     const { startRow, endRow } = this.getExteriorTraversalRowBounds();
     const exitSidewalkEdgeRow = Math.random() < 0.5 ? startRow : endRow;
 
-    this.trySubscribePerson(person);
-    this.registerVisitSatisfaction(person);
+    if (person.hasEnteredGym) {
+      if (!this.hasRequiredCheckInFlow()) {
+        this.setSatisfaction(person, 0);
+      }
+      this.trySubscribePerson(person);
+      this.registerVisitSatisfaction(person);
+    }
 
     person.state = 'leaving-door';
     person.targetX = entryPoints.inside.x;

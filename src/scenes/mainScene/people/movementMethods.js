@@ -24,6 +24,21 @@ export const movementMethods = {
     return false;
   },
 
+  redirectPersonFromClosedEntrance(person, mapLayout) {
+    const streetOutsideDistance = person.streetOutsideDistance ?? this.getStreetCenterOutsideDistance() ?? 1;
+    const streetPoint = this.getExteriorTileCenter(this.entranceTile.row, streetOutsideDistance, mapLayout);
+
+    person.wantsToEnterGym = false;
+    person.state = 'to-street';
+    person.targetX = streetPoint.x;
+    person.targetY = streetPoint.y;
+    person.targetItemId = null;
+    person.queuedItemId = null;
+    person.queueSeconds = 0;
+    person.destinationType = null;
+    person.destinationItemKey = null;
+  },
+
   handleReachedStreet(person, mapLayout) {
     const streetOutsideDistance = person.streetOutsideDistance ?? this.getStreetCenterOutsideDistance() ?? 1;
     const targetRow = person.wantsToEnterGym ? this.entranceTile.row : person.passThroughRow;
@@ -45,6 +60,11 @@ export const movementMethods = {
   },
 
   handleReachedEntranceSidewalk(person, mapLayout) {
+    if (!this.isGymOpenAt()) {
+      this.redirectPersonFromClosedEntrance(person, mapLayout);
+      return;
+    }
+
     const entryPoints = this.getEntrancePoints(mapLayout);
 
     person.state = 'entering';

@@ -54,6 +54,8 @@ sceneManager.register(
 
       const selectedLocation = FREE_MODE_LOCATIONS.find((location) => location.id === selectedLevel.locationId)
         ?? FREE_MODE_LOCATIONS[0];
+      const shouldShowLevelIntro = Array.isArray(selectedLevel.introDialoguePages)
+        && selectedLevel.introDialoguePages.length > 0;
 
       mainScene.startNewGame(
         selectedLocation,
@@ -62,7 +64,7 @@ sceneManager.register(
           label: selectedLevel.label,
           startingBank: selectedLevel.startingBank
         },
-        false,
+        shouldShowLevelIntro,
         {
           gymName,
           gymMainColor,

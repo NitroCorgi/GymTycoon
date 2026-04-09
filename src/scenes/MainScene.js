@@ -226,11 +226,16 @@ export class MainScene {
     this.purchasedGymUpgrades = new Set();
 
     this.tutorialVisible = Boolean(showTutorialWelcome);
-    this.tutorialWelcomeVisible = Boolean(showTutorialWelcome);
+    this.tutorialWelcomeVisible = false;
     this.tutorialCompleteVisible = false;
     this.tutorialHasShownCompletion = false;
     this.tutorialUnlockedStageCount = 1;
     this.tutorialStageCompletions = [false, false, false];
+    this.tutorialWelcomePages = [];
+    this.tutorialWelcomePageIndex = 0;
+    this.tutorialWelcomeTypedLength = 0;
+    this.tutorialWelcomeTypingIntervalId = null;
+    this.tutorialWelcomeTypingSpeedMs = 18;
     this.tutorialRenderStateKey = '';
     this.campaignGoalsRenderStateKey = '';
     this.gymUpgradesRenderStateKey = '';
@@ -242,6 +247,7 @@ export class MainScene {
     this.initializeSimulationSystems(selectedLocation);
     this.refreshCurrentWeather();
     this.syncCalendarFromTimeKeeper();
+    this.initializeTutorialWelcomeState(showTutorialWelcome);
   this.resetDailyArrivalPlan();
 
     this.initializeStartingMembers(configuredStartingMembers ?? this.campaignConfig?.startingMembers ?? 0);
@@ -261,6 +267,106 @@ export class MainScene {
         visitSatisfaction: this.randomIntInclusive(60, 85)
       });
     }
+  }
+
+  getDefaultTutorialWelcomePages() {
+    return [
+      'Welcome to Gym Tycoon Free Mode! To get started, you need a check-in, lockers, and devices. The more devices you have, the higher your popularity. The more popular you are, the more people come into the gym. If they are satisfied with your gym, they will subscribe to a membership! Click the Guide button on the bottom left to see some tasks to guide you.'
+    ];
+  }
+
+  getTutorialWelcomePages(showTutorialWelcome) {
+    if (!showTutorialWelcome) {
+      return [];
+    }
+
+    const campaignPages = this.campaignConfig?.introDialoguePages;
+    if (Array.isArray(campaignPages) && campaignPages.length > 0) {
+      return campaignPages.filter((page) => typeof page === 'string' && page.trim().length > 0);
+    }
+
+    return this.getDefaultTutorialWelcomePages();
+  }
+
+  clearTutorialWelcomeTypingInterval() {
+    if (this.tutorialWelcomeTypingIntervalId !== null) {
+      clearInterval(this.tutorialWelcomeTypingIntervalId);
+      this.tutorialWelcomeTypingIntervalId = null;
+    }
+  }
+
+  getCurrentTutorialWelcomePageText() {
+    if (!Array.isArray(this.tutorialWelcomePages) || this.tutorialWelcomePages.length === 0) {
+      return '';
+    }
+
+    return this.tutorialWelcomePages[this.tutorialWelcomePageIndex] ?? '';
+  }
+
+  isCurrentTutorialWelcomePageFullyTyped() {
+    const currentText = this.getCurrentTutorialWelcomePageText();
+    return this.tutorialWelcomeTypedLength >= currentText.length;
+  }
+
+  startTutorialWelcomeTyping() {
+    const currentText = this.getCurrentTutorialWelcomePageText();
+    this.clearTutorialWelcomeTypingInterval();
+
+    if (!this.tutorialWelcomeVisible || currentText.length === 0) {
+      this.tutorialWelcomeTypedLength = 0;
+      return;
+    }
+
+    this.tutorialWelcomeTypedLength = 0;
+    this.tutorialWelcomeTypingIntervalId = setInterval(() => {
+      if (!this.tutorialWelcomeVisible) {
+        this.clearTutorialWelcomeTypingInterval();
+        return;
+      }
+
+      this.tutorialWelcomeTypedLength = Math.min(currentText.length, this.tutorialWelcomeTypedLength + 1);
+      if (this.tutorialWelcomeTypedLength >= currentText.length) {
+        this.clearTutorialWelcomeTypingInterval();
+      }
+    }, this.tutorialWelcomeTypingSpeedMs);
+  }
+
+  initializeTutorialWelcomeState(showTutorialWelcome) {
+    this.clearTutorialWelcomeTypingInterval();
+    this.tutorialWelcomePages = this.getTutorialWelcomePages(showTutorialWelcome);
+    this.tutorialWelcomePageIndex = 0;
+    this.tutorialWelcomeTypedLength = 0;
+    this.tutorialWelcomeVisible = this.tutorialWelcomePages.length > 0;
+
+    if (this.tutorialWelcomeVisible) {
+      this.startTutorialWelcomeTyping();
+    }
+  }
+
+  dismissTutorialWelcomeDialog() {
+    this.tutorialWelcomeVisible = false;
+    this.clearTutorialWelcomeTypingInterval();
+  }
+
+  handleTutorialWelcomeNext() {
+    if (!this.tutorialWelcomeVisible) {
+      return;
+    }
+
+    const currentText = this.getCurrentTutorialWelcomePageText();
+    if (this.tutorialWelcomeTypedLength < currentText.length) {
+      this.tutorialWelcomeTypedLength = currentText.length;
+      this.clearTutorialWelcomeTypingInterval();
+      return;
+    }
+
+    if (this.tutorialWelcomePageIndex < this.tutorialWelcomePages.length - 1) {
+      this.tutorialWelcomePageIndex += 1;
+      this.startTutorialWelcomeTyping();
+      return;
+    }
+
+    this.dismissTutorialWelcomeDialog();
   }
 
   initializeSimulationSystems(selectedLocation) {
@@ -340,6 +446,7 @@ export class MainScene {
       tutorialModal,
       tutorialModalCloseButton,
       tutorialWelcomeModal,
+      tutorialWelcomeNextButton,
       tutorialWelcomeCloseButton,
       tutorialCompleteModal,
       tutorialCompleteCloseButton
@@ -629,13 +736,18 @@ export class MainScene {
     });
 
     tutorialWelcomeCloseButton?.addEventListener('click', () => {
-      this.tutorialWelcomeVisible = false;
+      this.dismissTutorialWelcomeDialog();
+      this.updateUiMetrics();
+    });
+
+    tutorialWelcomeNextButton?.addEventListener('click', () => {
+      this.handleTutorialWelcomeNext();
       this.updateUiMetrics();
     });
 
     tutorialWelcomeModal?.addEventListener('click', (event) => {
       if (event.target !== tutorialWelcomeModal) return;
-      this.tutorialWelcomeVisible = false;
+      this.dismissTutorialWelcomeDialog();
       this.updateUiMetrics();
     });
 
@@ -998,6 +1110,15 @@ export class MainScene {
     }
 
     return true;
+  }
+
+  isGymOpenAt(dateTime = null) {
+    const resolvedDateTime = dateTime ?? this.timeKeeper?.getCurrentDateTimeStruct?.() ?? null;
+    if (!resolvedDateTime || !this.openingHoursSchedule?.isOpen) {
+      return true;
+    }
+
+    return this.openingHoursSchedule.isOpen(resolvedDateTime);
   }
 
   getPlacedItemCount(itemKey) {
@@ -1604,6 +1725,11 @@ export class MainScene {
       return 0;
     }
 
+    if (!this.isGymOpenAt(dateTime)) {
+      this.currentExpectedArrivalsPerInGameMinute = 0;
+      return 0;
+    }
+
     const inGameMinutesElapsed = deltaSeconds * SIMULATION_DEFAULTS.arrivals.inGameMinutesPerRealSecond;
     const totalDayMinutes = Math.max(1, this.dailyArrivalPlan.totalDayMinutes);
 
@@ -1694,7 +1820,7 @@ export class MainScene {
 
     return {
       ...baseState,
-      isOpen: this.openingHoursSchedule.isOpen(dateTime),
+      isOpen: this.isGymOpenAt(dateTime),
       weatherLabel: weatherType,
       weatherEmoji: weatherEmojiByType[weatherType] ?? '☁️'
     };
@@ -1722,6 +1848,10 @@ export class MainScene {
   }
 
   spawnIncomingPerson(mapLayout, visitorType = 'newCustomers') {
+    if (!this.isGymOpenAt()) {
+      return false;
+    }
+
     const incomingVisitor = this.chooseIncomingVisitorProfile(visitorType);
     if (!incomingVisitor) {
       return false;
@@ -1759,6 +1889,7 @@ export class MainScene {
       passThroughRow,
       wantsToEnterGym,
       entryDecisionPopularity,
+      hasEnteredGym: false,
       hasCompletedCheckIn: false,
       nearSidewalkOutsideDistance,
       targetItemId: null,
