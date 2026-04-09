@@ -93,12 +93,38 @@ export class CampaignScene {
     if (!(detailsRoot instanceof HTMLElement) || !level) return;
 
     const goals = level.goals;
+    const averageSatisfactionGoal = goals?.averageSatisfaction ?? goals?.satisfaction;
+    const open24HoursGoal = goals?.open24Hours ?? goals?.alwaysOpen ?? goals?.open247;
+    const vendingMachinesGoal =
+      goals?.vendingMachines ?? goals?.vendingMachinesMin ?? goals?.minVendingMachines;
+    const monthlyVendingIncomeGoal =
+      goals?.vendingIncomeMonthly ?? goals?.monthlyVendingIncome ?? goals?.vendingIncomePerMonth;
+    const goalItems = goals
+      ? [
+          `Have €${goals.bank.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')} in bank`,
+          `Reach ${goals.popularityStars} star popularity`,
+          `Have ${goals.members} members`,
+          ...(open24HoursGoal ? ['Have the gym open 24/7'] : []),
+          ...(typeof vendingMachinesGoal === 'number'
+            ? [`Place at least ${vendingMachinesGoal} vending machines`]
+            : []),
+          ...(typeof monthlyVendingIncomeGoal === 'number'
+            ? [
+                `Have at least €${monthlyVendingIncomeGoal
+                  .toString()
+                  .replace(/\B(?=(\d{3})+(?!\d))/g, '.')} income with vending machines in a month`
+              ]
+            : []),
+          ...(typeof averageSatisfactionGoal === 'number'
+            ? [`Have an average satisfaction of ${averageSatisfactionGoal}`]
+            : [])
+        ]
+      : [];
+
     const goalMarkup = goals
       ? `
         <ul class="campaign-level-goals-list">
-          <li>Have €${goals.bank.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')} in bank</li>
-          <li>Reach ${goals.popularityStars} star popularity</li>
-          <li>Have ${goals.members} members</li>
+          ${goalItems.map((goalItem) => `<li>${goalItem}</li>`).join('')}
         </ul>
       `
       : '<p class="campaign-level-coming-soon">This level will be added later.</p>';
@@ -113,7 +139,7 @@ export class CampaignScene {
             <span>Starting bank: €${level.startingBank.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')}</span>
             <span>Starting members: ${level.startingMembers ?? 0}</span>
           </div>
-          <p class="campaign-level-details-text">Same map and customer encounters as Free Mode's home ground floor location.</p>
+          <p class="campaign-level-details-text">Same map and customer encounters as Free Mode's ${level.locationLabel ?? level.label}.</p>
           <h5>Goals</h5>
           ${goalMarkup}
         ` : `

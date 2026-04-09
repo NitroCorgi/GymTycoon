@@ -396,7 +396,7 @@ export const SHOWER_SECONDS = 15;
 export const SATISFACTION_MIN = 0;
 export const SATISFACTION_MAX = 100;
 
-export const DEFAULT_DEVICE_USAGE_SECONDS = 15;
+export const DEFAULT_DEVICE_USAGE_SECONDS = 5;
 export const RECEPTION_DESK_USAGE_SECONDS = 3;
 export const TURNSTILE_USAGE_SECONDS = 1;
 export const LOCKER_USAGE_SECONDS = 5;
@@ -520,28 +520,62 @@ export const CAMPAIGN_LEVELS = [
     isAvailable: true,
     description: 'Turn the empty room in your home into the first profitable gym in your campaign.',
     goals: {
-      bank: 25000,
+      bank: 20000,
       popularityStars: 2,
-      members: 30
+      members: 100
     }
   },
   {
     id: 'level-2',
     label: 'Level 2',
-    isAvailable: false,
-    description: 'Coming soon.'
+    locationId: 'small-rural',
+    locationLabel: 'Small property in rural area',
+    startingBank: 20000,
+    startingMembers: 100,
+    isAvailable: true,
+    description: 'Expand beyond your home gym and prove you can grow steadily in a rural market.',
+    goals: {
+      bank: 50000,
+      popularityStars: 3,
+      averageSatisfaction: 75,
+      members: 250
+    }
   },
   {
     id: 'level-3',
     label: 'Level 3',
-    isAvailable: false,
-    description: 'Coming soon.'
+    locationId: 'medium-suburban',
+    locationLabel: 'Medium property in suburban district',
+    startingBank: 50000,
+    startingMembers: 250,
+    isAvailable: true,
+    description: 'Scale up in the suburbs by running a larger gym around the clock while keeping members happy.',
+    goals: {
+      bank: 100000,
+      popularityStars: 4,
+      open24Hours: true,
+      vendingMachines: 2,
+      averageSatisfaction: 70,
+      members: 600
+    }
   },
   {
     id: 'level-4',
     label: 'Level 4',
-    isAvailable: false,
-    description: 'Coming soon.'
+    locationId: 'downtown-prime',
+    locationLabel: 'Downtown property in prime location',
+    startingBank: 100000,
+    startingMembers: 600,
+    isAvailable: true,
+    description: 'Master the busiest market by running a premium 24/7 gym and hitting elite growth targets.',
+    goals: {
+      bank: 1000000,
+      popularityStars: 5,
+      open24Hours: true,
+      vendingIncomeMonthly: 1000,
+      averageSatisfaction: 70,
+      members: 1000
+    }
   }
 ];
 

@@ -90,6 +90,7 @@ export const exitAndShowerMethods = {
         vendingMachine.vendingStock = Math.max(0, (vendingMachine.vendingStock ?? VENDING_MAX_STOCK) - 1);
         vendingMachine.vendingPurchases = (vendingMachine.vendingPurchases ?? 0) + 1;
         vendingMachine.vendingRevenue = (vendingMachine.vendingRevenue ?? 0) + purchaseAmount;
+        this.currentCycleVendingIncome += purchaseAmount;
         this.money += purchaseAmount;
       }
     }
@@ -205,7 +206,7 @@ export const exitAndShowerMethods = {
         this.updateMemberProfileVisit(person.memberId, satisfactionPercent);
       }
 
-      const cancelChancePercent = Math.max(0, 50 - satisfactionPercent);
+      const cancelChancePercent = Math.max(0, 35 - satisfactionPercent);
       if (Math.random() < cancelChancePercent / 100) {
         if (person.memberId !== null && this.removeMemberProfile(person.memberId)) {
           this.currentCycleChurn += 1;
@@ -216,7 +217,7 @@ export const exitAndShowerMethods = {
       return;
     }
 
-    const subscribeChancePercent = satisfactionPercent;
+    const subscribeChancePercent = satisfactionPercent + 20;
     if (Math.random() < subscribeChancePercent / 100) {
       const memberProfile = this.createMemberProfile(person);
       this.currentCycleGained += 1;

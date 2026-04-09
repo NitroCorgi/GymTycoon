@@ -67,6 +67,7 @@ sceneManager.register(
           gymName,
           gymMainColor,
           startingBank: selectedLevel.startingBank,
+          startingMembers: selectedLevel.startingMembers,
           campaignConfig: selectedLevel
         }
       );

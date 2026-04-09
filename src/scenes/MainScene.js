@@ -121,6 +121,9 @@ export class MainScene {
     const configuredStartingBank = Number.isFinite(setupConfig?.startingBank)
       ? Math.max(0, Math.floor(setupConfig.startingBank))
       : null;
+    const configuredStartingMembers = Number.isFinite(setupConfig?.startingMembers)
+      ? Math.max(0, Math.floor(setupConfig.startingMembers))
+      : null;
     this.gymName = configuredGymName || 'My Gym';
     this.gymMainColor = /^#[0-9a-fA-F]{6}$/.test(configuredGymMainColor) ? configuredGymMainColor : '#6ea0ff';
     this.campaignConfig = setupConfig?.campaignConfig ?? null;
@@ -142,11 +145,13 @@ export class MainScene {
 
     this.lastCycleIncome = 0;
     this.lastCycleDayTicketIncome = 0;
+    this.lastCycleVendingIncome = 0;
     this.lastCycleChurn = 0;
     this.lastCycleGained = 0;
     this.currentCycleGained = 0;
     this.currentCycleChurn = 0;
     this.currentCycleDayTicketIncome = 0;
+    this.currentCycleVendingIncome = 0;
     this.monthSatisfactionSum = 0;
     this.monthSatisfactionCount = 0;
     this.currentMonth = SIMULATION_DEFAULTS.time.startMonth;
@@ -239,9 +244,23 @@ export class MainScene {
     this.syncCalendarFromTimeKeeper();
   this.resetDailyArrivalPlan();
 
+    this.initializeStartingMembers(configuredStartingMembers ?? this.campaignConfig?.startingMembers ?? 0);
+
     this.buildBuyPanelButtons();
     this.recordMonthlyMetricsSnapshot(this.getCurrentMonthLabel());
     this.refreshUi();
+  }
+
+  initializeStartingMembers(startingMembers) {
+    const normalizedCount = Number.isFinite(startingMembers)
+      ? Math.max(0, Math.floor(startingMembers))
+      : 0;
+
+    for (let index = 0; index < normalizedCount; index += 1) {
+      this.createMemberProfile({
+        visitSatisfaction: this.randomIntInclusive(60, 85)
+      });
+    }
   }
 
   initializeSimulationSystems(selectedLocation) {
@@ -966,6 +985,26 @@ export class MainScene {
     return Math.min(5, Math.max(1, Math.floor(this.popularity / 20) + 1));
   }
 
+  isGymOpen24Hours() {
+    if (!this.openingHoursSchedule?.getHoursForWeekday) {
+      return false;
+    }
+
+    for (let weekday = 0; weekday < 7; weekday += 1) {
+      const { openHour = 0, closeHour = 24 } = this.openingHoursSchedule.getHoursForWeekday(weekday);
+      if (openHour !== 0 || closeHour !== 24) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  getPlacedItemCount(itemKey) {
+    if (!itemKey) return 0;
+    return this.items.reduce((count, item) => count + (item.key === itemKey ? 1 : 0), 0);
+  }
+
   getCampaignGoalProgressState() {
     if (!this.campaignConfig?.goals) {
       return null;
@@ -973,29 +1012,74 @@ export class MainScene {
 
     const { goals } = this.campaignConfig;
     const stars = this.getTutorialPopularityStars();
+    const averageSatisfactionGoal = goals.averageSatisfaction ?? goals.satisfaction;
+    const open24HoursGoal = goals.open24Hours ?? goals.alwaysOpen ?? goals.open247;
+    const vendingMachinesGoal = goals.vendingMachines ?? goals.vendingMachinesMin ?? goals.minVendingMachines;
+    const monthlyVendingIncomeGoal =
+      goals.vendingIncomeMonthly ?? goals.monthlyVendingIncome ?? goals.vendingIncomePerMonth;
+    const vendingMachineCount = this.getPlacedItemCount('vendingMachine');
+    const goalItems = [
+      {
+        key: 'bank',
+        label: `Have ${this.formatEuro(goals.bank)} in bank`,
+        progress: `${this.formatEuro(this.money)} / ${this.formatEuro(goals.bank)}`,
+        complete: this.money >= goals.bank
+      },
+      {
+        key: 'popularity',
+        label: `Reach ${goals.popularityStars} star popularity`,
+        progress: `${stars} / ${goals.popularityStars} stars`,
+        complete: stars >= goals.popularityStars
+      },
+      {
+        key: 'members',
+        label: `Have ${goals.members} members`,
+        progress: `${this.members} / ${goals.members}`,
+        complete: this.members >= goals.members
+      }
+    ];
+
+    if (open24HoursGoal) {
+      const open24Hours = this.isGymOpen24Hours();
+      goalItems.push({
+        key: 'open24Hours',
+        label: 'Have the gym open 24/7',
+        progress: open24Hours ? '24/7 enabled' : 'Not set to 24/7',
+        complete: open24Hours
+      });
+    }
+
+    if (typeof vendingMachinesGoal === 'number') {
+      goalItems.push({
+        key: 'vendingMachines',
+        label: `Place at least ${vendingMachinesGoal} vending machines`,
+        progress: `${vendingMachineCount} / ${vendingMachinesGoal}`,
+        complete: vendingMachineCount >= vendingMachinesGoal
+      });
+    }
+
+    if (typeof monthlyVendingIncomeGoal === 'number') {
+      goalItems.push({
+        key: 'vendingIncomeMonthly',
+        label: `Have at least ${this.formatEuro(monthlyVendingIncomeGoal)} income with vending machines in a month`,
+        progress: `${this.formatEuro(this.currentCycleVendingIncome)} / ${this.formatEuro(monthlyVendingIncomeGoal)}`,
+        complete: this.currentCycleVendingIncome >= monthlyVendingIncomeGoal
+      });
+    }
+
+    if (typeof averageSatisfactionGoal === 'number') {
+      const averageSatisfaction = this.getAverageSatisfaction();
+      goalItems.push({
+        key: 'averageSatisfaction',
+        label: `Have an average satisfaction of ${averageSatisfactionGoal}`,
+        progress: `${averageSatisfaction} / ${averageSatisfactionGoal}`,
+        complete: averageSatisfaction >= averageSatisfactionGoal
+      });
+    }
 
     return {
       title: `${this.campaignConfig.label} Goals`,
-      items: [
-        {
-          key: 'bank',
-          label: `Have ${this.formatEuro(goals.bank)} in bank`,
-          progress: `${this.formatEuro(this.money)} / ${this.formatEuro(goals.bank)}`,
-          complete: this.money >= goals.bank
-        },
-        {
-          key: 'popularity',
-          label: `Reach ${goals.popularityStars} star popularity`,
-          progress: `${stars} / ${goals.popularityStars} stars`,
-          complete: stars >= goals.popularityStars
-        },
-        {
-          key: 'members',
-          label: `Have ${goals.members} members`,
-          progress: `${this.members} / ${goals.members}`,
-          complete: this.members >= goals.members
-        }
-      ]
+      items: goalItems
     };
   }
 
@@ -1268,8 +1352,43 @@ export class MainScene {
     const bankGoalReached = this.money >= (this.campaignConfig.goals.bank ?? Number.MAX_SAFE_INTEGER);
     const popularityGoalReached = this.getTutorialPopularityStars() >= (this.campaignConfig.goals.popularityStars ?? 0);
     const membersGoalReached = this.members >= (this.campaignConfig.goals.members ?? Number.MAX_SAFE_INTEGER);
+    const averageSatisfactionGoal =
+      this.campaignConfig.goals.averageSatisfaction ?? this.campaignConfig.goals.satisfaction;
+    const open24HoursGoal =
+      this.campaignConfig.goals.open24Hours ??
+      this.campaignConfig.goals.alwaysOpen ??
+      this.campaignConfig.goals.open247;
+    const vendingMachinesGoal =
+      this.campaignConfig.goals.vendingMachines ??
+      this.campaignConfig.goals.vendingMachinesMin ??
+      this.campaignConfig.goals.minVendingMachines;
+    const monthlyVendingIncomeGoal =
+      this.campaignConfig.goals.vendingIncomeMonthly ??
+      this.campaignConfig.goals.monthlyVendingIncome ??
+      this.campaignConfig.goals.vendingIncomePerMonth;
+    const averageSatisfactionGoalReached =
+      typeof averageSatisfactionGoal === 'number'
+        ? this.getAverageSatisfaction() >= averageSatisfactionGoal
+        : true;
+    const open24HoursGoalReached = open24HoursGoal ? this.isGymOpen24Hours() : true;
+    const vendingMachinesGoalReached =
+      typeof vendingMachinesGoal === 'number'
+        ? this.getPlacedItemCount('vendingMachine') >= vendingMachinesGoal
+        : true;
+    const monthlyVendingIncomeGoalReached =
+      typeof monthlyVendingIncomeGoal === 'number'
+        ? this.currentCycleVendingIncome >= monthlyVendingIncomeGoal
+        : true;
 
-    if (!bankGoalReached || !popularityGoalReached || !membersGoalReached) {
+    if (
+      !bankGoalReached ||
+      !popularityGoalReached ||
+      !membersGoalReached ||
+      !averageSatisfactionGoalReached ||
+      !open24HoursGoalReached ||
+      !vendingMachinesGoalReached ||
+      !monthlyVendingIncomeGoalReached
+    ) {
       return false;
     }
 
@@ -1314,7 +1433,9 @@ export class MainScene {
     const subscriptionIncome = this.subscriptionFee * this.members;
     this.lastCycleIncome = subscriptionIncome;
     this.lastCycleDayTicketIncome = this.currentCycleDayTicketIncome;
+    this.lastCycleVendingIncome = this.currentCycleVendingIncome;
     this.currentCycleDayTicketIncome = 0;
+    this.currentCycleVendingIncome = 0;
     this.money = this.money - monthlyCosts + subscriptionIncome;
     const monthlyProfit = this.money - this.monthStartBank;
     this.recordMonthlyStatistics({
@@ -1393,7 +1514,7 @@ export class MainScene {
   }
 
   getDailyReturningMemberTarget() {
-    return Math.max(0, Math.round(this.memberProfiles.length * 0.25));
+    return Math.max(0, Math.round(this.memberProfiles.length * 0.10));
   }
 
   getTotalDayMinutes() {
