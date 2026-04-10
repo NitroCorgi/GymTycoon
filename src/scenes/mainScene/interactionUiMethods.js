@@ -1004,10 +1004,15 @@ export const interactionUiMethods = {
       sellDeviceButton.disabled = !selected && !selectedDecorConfig;
     }
 
+    const isFreeMode = !this.campaignConfig;
     if (guideButton) {
-      guideButton.textContent = this.campaignConfig?.goals ? 'Goals' : 'Guide';
+      guideButton.hidden = !isFreeMode;
+      guideButton.textContent = 'Guide';
     }
-    guideButton?.classList.toggle('is-active', this.tutorialVisible);
+    if (!isFreeMode) {
+      this.tutorialVisible = false;
+    }
+    guideButton?.classList.toggle('is-active', isFreeMode && this.tutorialVisible);
     this.renderCampaignGoalsPanel(campaignGoalsPanel);
 
     tutorialModal?.classList.toggle('is-open', this.tutorialVisible);

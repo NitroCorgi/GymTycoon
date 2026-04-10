@@ -201,6 +201,7 @@ body {
   display: none;
   align-content: center;
   justify-items: center;
+  padding: 1rem;
   overflow: auto;
   background: rgb(7 12 22 / 62%);
   z-index: 12;
@@ -798,6 +799,20 @@ body {
   outline: none;
 }
 
+.title-screen-footer {
+  position: absolute;
+  left: 50%;
+  bottom: 0.8rem;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 0 1rem;
+  text-align: center;
+  font-size: 0.72rem;
+  color: #8c95a3;
+  letter-spacing: 0.01em;
+  pointer-events: none;
+}
+
 @media (max-width: 860px) {
   .campaign-selection-grid {
     grid-template-columns: minmax(0, 1fr);
@@ -882,6 +897,49 @@ body {
   border-color: #6ea0ff;
   background: #1a3b67;
   outline: none;
+}
+
+#title-tutorial-close-btn {
+  width: 1.9rem;
+  height: 1.9rem;
+  border: 1px solid #3a506f;
+  border-radius: 0.55rem;
+  background: #14243d;
+  color: #dbe8fb;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+#title-tutorial-close-btn:hover,
+#title-tutorial-close-btn:focus-visible {
+  border-color: #6ea0ff;
+  background: #1a3b67;
+  outline: none;
+}
+
+.title-tutorial-modal-card {
+  width: min(1100px, calc(100% - 2rem));
+  max-height: calc(100vh - 2rem);
+  min-height: 0;
+}
+
+.title-tutorial-body {
+  border: 1px solid #2f435f;
+  border-radius: 0.65rem;
+  background: rgb(11 19 33 / 75%);
+  padding: 0.7rem;
+  display: grid;
+  place-items: center;
+  overflow: auto;
+}
+
+#title-tutorial-image {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  max-height: calc(100vh - 10rem);
+  object-fit: contain;
+  border-radius: 0.45rem;
 }
 
 .stats-modal-body {
@@ -1445,6 +1503,16 @@ body {
 
 .tutorial-message-card .stats-modal-header h2 {
   font-size: 1.5rem;
+}
+
+@media (max-width: 640px) {
+  .title-tutorial-modal-card {
+    width: calc(100% - 1rem);
+  }
+
+  #title-tutorial-image {
+    max-height: calc(100vh - 8.6rem);
+  }
 }
 
 .bottom-bar-controls {

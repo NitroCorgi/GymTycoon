@@ -6,6 +6,9 @@ export class TitleScene {
 
     this.handleCampaignClick = this.handleCampaignClick.bind(this);
     this.handleFreeModeClick = this.handleFreeModeClick.bind(this);
+    this.handleTutorialOpenClick = this.handleTutorialOpenClick.bind(this);
+    this.handleTutorialCloseClick = this.handleTutorialCloseClick.bind(this);
+    this.handleTutorialModalClick = this.handleTutorialModalClick.bind(this);
   }
 
   onEnter() {
@@ -16,6 +19,9 @@ export class TitleScene {
     this.ui?.titleScreen?.classList.add('is-open');
     this.ui?.campaignButton?.addEventListener('click', this.handleCampaignClick);
     this.ui?.freeModeButton?.addEventListener('click', this.handleFreeModeClick);
+    this.ui?.titleTutorialButton?.addEventListener('click', this.handleTutorialOpenClick);
+    this.ui?.titleTutorialCloseButton?.addEventListener('click', this.handleTutorialCloseClick);
+    this.ui?.titleTutorialModal?.addEventListener('click', this.handleTutorialModalClick);
   }
 
   onExit() {
@@ -23,6 +29,10 @@ export class TitleScene {
     this.ui?.titleScreen?.classList.remove('is-open');
     this.ui?.campaignButton?.removeEventListener('click', this.handleCampaignClick);
     this.ui?.freeModeButton?.removeEventListener('click', this.handleFreeModeClick);
+    this.ui?.titleTutorialButton?.removeEventListener('click', this.handleTutorialOpenClick);
+    this.ui?.titleTutorialCloseButton?.removeEventListener('click', this.handleTutorialCloseClick);
+    this.ui?.titleTutorialModal?.removeEventListener('click', this.handleTutorialModalClick);
+    this.closeTutorialModal();
   }
 
   handleCampaignClick() {
@@ -31,6 +41,30 @@ export class TitleScene {
 
   handleFreeModeClick() {
     this.onStartFreeMode?.();
+  }
+
+  handleTutorialOpenClick() {
+    this.openTutorialModal();
+  }
+
+  handleTutorialCloseClick() {
+    this.closeTutorialModal();
+  }
+
+  handleTutorialModalClick(event) {
+    if (event.target === this.ui?.titleTutorialModal) {
+      this.closeTutorialModal();
+    }
+  }
+
+  openTutorialModal() {
+    this.ui?.titleTutorialModal?.classList.add('is-open');
+    this.ui?.titleTutorialModal?.setAttribute('aria-hidden', 'false');
+  }
+
+  closeTutorialModal() {
+    this.ui?.titleTutorialModal?.classList.remove('is-open');
+    this.ui?.titleTutorialModal?.setAttribute('aria-hidden', 'true');
   }
 
   update() {}

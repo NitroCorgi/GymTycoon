@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gym Tycoon</title>
+    <title>Mini Gym Tycoon v0.9</title>
     <meta name="description" content="Gym Tycoon browser game starter" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -69,12 +69,26 @@
         <canvas id="game-canvas" aria-label="Game canvas"></canvas>
         <section id="title-screen" class="title-screen" aria-label="Title screen">
           <div class="selection-screen-content title-screen-content">
-            <h1>Gym Tycoon</h1>
+            <h1>Mini Gym Tycoon v0.9</h1>
             <div class="title-screen-actions">
               <button id="campaign-btn" type="button">Campaign</button>
               <button id="free-mode-btn" type="button">Free Mode</button>
+              <button id="title-tutorial-btn" type="button">Tutorial</button>
             </div>
           </div>
+          <p class="title-screen-footer">Developed by Nico Burtzlaff, Alpha Version, Bugs may occur</p>
+        </section>
+
+        <section id="title-tutorial-modal" class="stats-modal" aria-label="Tutorial image" aria-hidden="true">
+          <article class="stats-modal-card title-tutorial-modal-card">
+            <header class="stats-modal-header">
+              <h2>Tutorial</h2>
+              <button id="title-tutorial-close-btn" type="button" aria-label="Close tutorial">✕</button>
+            </header>
+            <div class="title-tutorial-body">
+              <img id="title-tutorial-image" src="/src/assets/Tutorial.png" alt="Tutorial instructions" />
+            </div>
+          </article>
         </section>
 
         <section id="campaign-screen" class="campaign-screen" aria-label="Campaign setup screen">
