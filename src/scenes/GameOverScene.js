@@ -1,4 +1,5 @@
 import { drawText } from '../ui/drawText.js';
+import { showOnlyScreen } from './screenState.js';
 
 export class GameOverScene {
   constructor({ ui, onReturnToMenu }) {
@@ -21,12 +22,7 @@ export class GameOverScene {
   }
 
   onEnter() {
-    this.ui?.root?.classList.add('is-title-screen');
-    this.ui?.titleScreen?.classList.remove('is-open');
-    this.ui?.campaignScreen?.classList.remove('is-open');
-    this.ui?.campaignVictoryScreen?.classList.remove('is-open');
-    this.ui?.locationScreen?.classList.remove('is-open');
-    this.ui?.gameOverScreen?.classList.add('is-open');
+    showOnlyScreen(this.ui, 'gameOver', { titleMode: true });
 
     if (this.ui?.gameOverBankValue) {
       this.ui.gameOverBankValue.textContent = this.formatSignedEuro(this.finalBank);

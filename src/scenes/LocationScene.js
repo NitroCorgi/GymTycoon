@@ -1,4 +1,12 @@
 import { FREE_MODE_DIFFICULTIES, FREE_MODE_LOCATIONS } from './mainSceneConfig.js';
+import {
+  DEFAULT_GYM_MAIN_COLOR,
+  DEFAULT_GYM_NAME,
+  MAX_GYM_NAME_LENGTH,
+  sanitizeGymMainColor,
+  sanitizeGymName
+} from './gymProfile.js';
+import { showOnlyScreen } from './screenState.js';
 
 export class LocationScene {
   constructor({ ui, onStartGame }) {
@@ -7,8 +15,8 @@ export class LocationScene {
 
     this.selectedLocationId = null;
     this.selectedDifficultyId = null;
-    this.selectedGymName = 'My Gym';
-    this.selectedGymMainColor = '#6ea0ff';
+    this.selectedGymName = DEFAULT_GYM_NAME;
+    this.selectedGymMainColor = DEFAULT_GYM_MAIN_COLOR;
 
     this.handleLocationOptionChange = this.handleLocationOptionChange.bind(this);
     this.handleDifficultyOptionChange = this.handleDifficultyOptionChange.bind(this);
@@ -17,28 +25,13 @@ export class LocationScene {
     this.handleStartGameClick = this.handleStartGameClick.bind(this);
   }
 
-  sanitizeGymName(value) {
-    if (typeof value !== 'string') return 'My Gym';
-    const trimmed = value.trim().slice(0, 24);
-    return trimmed || 'My Gym';
-  }
-
-  sanitizeGymMainColor(value) {
-    if (typeof value !== 'string') return '#6ea0ff';
-    return /^#[0-9a-fA-F]{6}$/.test(value) ? value : '#6ea0ff';
-  }
-
   onEnter() {
-    this.ui?.root?.classList.add('is-title-screen');
-    this.ui?.titleScreen?.classList.remove('is-open');
-    this.ui?.campaignScreen?.classList.remove('is-open');
-    this.ui?.campaignVictoryScreen?.classList.remove('is-open');
-    this.ui?.locationScreen?.classList.add('is-open');
+    showOnlyScreen(this.ui, 'location', { titleMode: true });
 
     this.selectedLocationId = null;
     this.selectedDifficultyId = null;
-    this.selectedGymName = 'My Gym';
-    this.selectedGymMainColor = '#6ea0ff';
+    this.selectedGymName = DEFAULT_GYM_NAME;
+    this.selectedGymMainColor = DEFAULT_GYM_MAIN_COLOR;
 
     for (const input of this.ui?.locationOptionInputs ?? []) {
       input.checked = false;
@@ -52,7 +45,7 @@ export class LocationScene {
 
     if (this.ui?.locationGymNameInput instanceof HTMLInputElement) {
       this.ui.locationGymNameInput.value = this.selectedGymName;
-      this.ui.locationGymNameInput.maxLength = 24;
+      this.ui.locationGymNameInput.maxLength = MAX_GYM_NAME_LENGTH;
       this.ui.locationGymNameInput.addEventListener('input', this.handleGymNameInput);
     }
 
@@ -141,7 +134,7 @@ export class LocationScene {
   handleGymNameInput(event) {
     const input = event.currentTarget;
     if (!(input instanceof HTMLInputElement)) return;
-    this.selectedGymName = this.sanitizeGymName(input.value);
+    this.selectedGymName = sanitizeGymName(input.value);
     input.value = this.selectedGymName;
     this.updateStartButtonState();
   }
@@ -149,7 +142,7 @@ export class LocationScene {
   handleGymColorInput(event) {
     const input = event.currentTarget;
     if (!(input instanceof HTMLInputElement)) return;
-    this.selectedGymMainColor = this.sanitizeGymMainColor(input.value);
+    this.selectedGymMainColor = sanitizeGymMainColor(input.value);
     input.value = this.selectedGymMainColor;
   }
 

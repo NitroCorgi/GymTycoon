@@ -20,6 +20,8 @@ import { SIMULATION_DEFAULTS, WEATHER_TYPES } from '../systems/simulation/config
 import { TimeKeeper } from '../systems/simulation/TimeKeeper.js';
 import { getTimeBarUiState } from '../systems/simulation/uiTimeHelpers.js';
 import { WeatherGenerator } from '../systems/simulation/WeatherGenerator.js';
+import { normalizeGymProfile } from './gymProfile.js';
+import { hideAllScreens } from './screenState.js';
 
 export class MainScene {
   constructor({ ui, onGameOver, onCampaignVictory }) {
@@ -35,12 +37,7 @@ export class MainScene {
   }
 
   onEnter() {
-    this.ui?.root?.classList.remove('is-title-screen');
-    this.ui?.titleScreen?.classList.remove('is-open');
-    this.ui?.campaignScreen?.classList.remove('is-open');
-    this.ui?.campaignVictoryScreen?.classList.remove('is-open');
-    this.ui?.locationScreen?.classList.remove('is-open');
-    this.ui?.gameOverScreen?.classList.remove('is-open');
+    hideAllScreens(this.ui, { titleMode: false });
   }
 
   getDefaultLocationConfig() {
@@ -114,18 +111,15 @@ export class MainScene {
 
     this.locationId = selectedLocation.id;
     this.difficultyId = selectedDifficulty.id;
-    const configuredGymName =
-      typeof setupConfig?.gymName === 'string' ? setupConfig.gymName.trim().slice(0, 24) : '';
-    const configuredGymMainColor =
-      typeof setupConfig?.gymMainColor === 'string' ? setupConfig.gymMainColor : '';
+    const { gymName, gymMainColor } = normalizeGymProfile(setupConfig);
     const configuredStartingBank = Number.isFinite(setupConfig?.startingBank)
       ? Math.max(0, Math.floor(setupConfig.startingBank))
       : null;
     const configuredStartingMembers = Number.isFinite(setupConfig?.startingMembers)
       ? Math.max(0, Math.floor(setupConfig.startingMembers))
       : null;
-    this.gymName = configuredGymName || 'My Gym';
-    this.gymMainColor = /^#[0-9a-fA-F]{6}$/.test(configuredGymMainColor) ? configuredGymMainColor : '#6ea0ff';
+    this.gymName = gymName;
+    this.gymMainColor = gymMainColor;
     this.campaignConfig = setupConfig?.campaignConfig ?? null;
     this.mapRows = selectedLocation.mapRows ?? 8;
     this.mapCols = selectedLocation.mapCols ?? 8;
@@ -248,7 +242,7 @@ export class MainScene {
     this.refreshCurrentWeather();
     this.syncCalendarFromTimeKeeper();
     this.initializeTutorialWelcomeState(showTutorialWelcome);
-  this.resetDailyArrivalPlan();
+    this.resetDailyArrivalPlan();
 
     this.initializeStartingMembers(configuredStartingMembers ?? this.campaignConfig?.startingMembers ?? 0);
 

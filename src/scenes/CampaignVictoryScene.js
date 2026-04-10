@@ -1,25 +1,23 @@
+import { DEFAULT_GYM_NAME } from './gymProfile.js';
+import { showOnlyScreen } from './screenState.js';
+
 export class CampaignVictoryScene {
   constructor({ ui, onReturnToMenu }) {
     this.ui = ui;
     this.onReturnToMenu = onReturnToMenu;
     this.levelLabel = 'Level 1';
-    this.gymName = 'My Gym';
+    this.gymName = DEFAULT_GYM_NAME;
 
     this.handleReturnClick = this.handleReturnClick.bind(this);
   }
 
   setResult({ levelLabel, gymName }) {
     this.levelLabel = levelLabel || 'Level Complete';
-    this.gymName = gymName || 'My Gym';
+    this.gymName = gymName || DEFAULT_GYM_NAME;
   }
 
   onEnter() {
-    this.ui?.root?.classList.add('is-title-screen');
-    this.ui?.titleScreen?.classList.remove('is-open');
-    this.ui?.campaignScreen?.classList.remove('is-open');
-    this.ui?.locationScreen?.classList.remove('is-open');
-    this.ui?.gameOverScreen?.classList.remove('is-open');
-    this.ui?.campaignVictoryScreen?.classList.add('is-open');
+    showOnlyScreen(this.ui, 'campaignVictory', { titleMode: true });
 
     if (this.ui?.campaignVictoryTitle) {
       this.ui.campaignVictoryTitle.textContent = `${this.levelLabel} Complete`;

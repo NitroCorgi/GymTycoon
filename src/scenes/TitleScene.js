@@ -1,3 +1,5 @@
+import { showOnlyScreen } from './screenState.js';
+
 export class TitleScene {
   constructor({ ui, onStartFreeMode, onStartCampaign }) {
     this.ui = ui;
@@ -12,11 +14,7 @@ export class TitleScene {
   }
 
   onEnter() {
-    this.ui?.root?.classList.add('is-title-screen');
-    this.ui?.campaignScreen?.classList.remove('is-open');
-    this.ui?.campaignVictoryScreen?.classList.remove('is-open');
-    this.ui?.locationScreen?.classList.remove('is-open');
-    this.ui?.titleScreen?.classList.add('is-open');
+    showOnlyScreen(this.ui, 'title', { titleMode: true });
     this.ui?.campaignButton?.addEventListener('click', this.handleCampaignClick);
     this.ui?.freeModeButton?.addEventListener('click', this.handleFreeModeClick);
     this.ui?.titleTutorialButton?.addEventListener('click', this.handleTutorialOpenClick);

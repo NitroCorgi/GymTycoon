@@ -1,7 +1,12 @@
 import { CAMPAIGN_LEVELS } from './mainSceneConfig.js';
-
-const DEFAULT_GYM_NAME = 'My Gym';
-const DEFAULT_GYM_COLOR = '#6ea0ff';
+import {
+  DEFAULT_GYM_MAIN_COLOR,
+  DEFAULT_GYM_NAME,
+  MAX_GYM_NAME_LENGTH,
+  sanitizeGymMainColor,
+  sanitizeGymName
+} from './gymProfile.js';
+import { showOnlyScreen } from './screenState.js';
 
 export class CampaignScene {
   constructor({ ui, onReturnToMenu, onStartLevel }) {
@@ -10,7 +15,7 @@ export class CampaignScene {
     this.onStartLevel = onStartLevel;
 
     this.selectedGymName = DEFAULT_GYM_NAME;
-    this.selectedGymMainColor = DEFAULT_GYM_COLOR;
+    this.selectedGymMainColor = DEFAULT_GYM_MAIN_COLOR;
     this.selectedLevelId = 'level-1';
 
     this.handleGymNameInput = this.handleGymNameInput.bind(this);
@@ -24,28 +29,12 @@ export class CampaignScene {
     return CAMPAIGN_LEVELS.find((level) => level.id === this.selectedLevelId) ?? CAMPAIGN_LEVELS[0] ?? null;
   }
 
-  sanitizeGymName(value) {
-    if (typeof value !== 'string') return DEFAULT_GYM_NAME;
-    const trimmed = value.trim().slice(0, 24);
-    return trimmed || DEFAULT_GYM_NAME;
-  }
-
-  sanitizeGymMainColor(value) {
-    if (typeof value !== 'string') return DEFAULT_GYM_COLOR;
-    return /^#[0-9a-fA-F]{6}$/.test(value) ? value : DEFAULT_GYM_COLOR;
-  }
-
   onEnter() {
-    this.ui?.root?.classList.add('is-title-screen');
-    this.ui?.titleScreen?.classList.remove('is-open');
-    this.ui?.locationScreen?.classList.remove('is-open');
-    this.ui?.gameOverScreen?.classList.remove('is-open');
-    this.ui?.campaignVictoryScreen?.classList.remove('is-open');
-    this.ui?.campaignScreen?.classList.add('is-open');
+    showOnlyScreen(this.ui, 'campaign', { titleMode: true });
 
     if (this.ui?.campaignGymNameInput instanceof HTMLInputElement) {
       this.ui.campaignGymNameInput.value = this.selectedGymName;
-      this.ui.campaignGymNameInput.maxLength = 24;
+      this.ui.campaignGymNameInput.maxLength = MAX_GYM_NAME_LENGTH;
       this.ui.campaignGymNameInput.addEventListener('input', this.handleGymNameInput);
     }
 
@@ -162,14 +151,14 @@ export class CampaignScene {
   handleGymNameInput(event) {
     const input = event.currentTarget;
     if (!(input instanceof HTMLInputElement)) return;
-    this.selectedGymName = this.sanitizeGymName(input.value);
+    this.selectedGymName = sanitizeGymName(input.value);
     input.value = this.selectedGymName;
   }
 
   handleGymColorInput(event) {
     const input = event.currentTarget;
     if (!(input instanceof HTMLInputElement)) return;
-    this.selectedGymMainColor = this.sanitizeGymMainColor(input.value);
+    this.selectedGymMainColor = sanitizeGymMainColor(input.value);
     input.value = this.selectedGymMainColor;
   }
 

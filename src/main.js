@@ -9,6 +9,7 @@ import { GameOverScene } from './scenes/GameOverScene.js';
 import { CampaignScene } from './scenes/CampaignScene.js';
 import { CampaignVictoryScene } from './scenes/CampaignVictoryScene.js';
 import { CAMPAIGN_LEVELS, FREE_MODE_DIFFICULTIES, FREE_MODE_LOCATIONS } from './scenes/mainSceneConfig.js';
+import { SCENE_IDS } from './scenes/sceneIds.js';
 import { getGameUi } from './ui/getGameUi.js';
 
 const ui = getGameUi();
@@ -22,32 +23,32 @@ const input = new Input();
 const sceneManager = new SceneManager();
 const gameOverScene = new GameOverScene({
   ui,
-  onReturnToMenu: () => sceneManager.setActive('title')
+  onReturnToMenu: () => sceneManager.setActive(SCENE_IDS.TITLE)
 });
 const campaignVictoryScene = new CampaignVictoryScene({
   ui,
-  onReturnToMenu: () => sceneManager.setActive('title')
+  onReturnToMenu: () => sceneManager.setActive(SCENE_IDS.TITLE)
 });
 const mainScene = new MainScene({
   ui,
   onGameOver: ({ bank }) => {
     gameOverScene.setResult({ bank });
-    sceneManager.setActive('game-over');
+    sceneManager.setActive(SCENE_IDS.GAME_OVER);
   },
   onCampaignVictory: ({ levelId, levelLabel, gymName }) => {
     campaignVictoryScene.setResult({ levelId, levelLabel, gymName });
-    sceneManager.setActive('campaign-victory');
+    sceneManager.setActive(SCENE_IDS.CAMPAIGN_VICTORY);
   }
 });
 
-sceneManager.register('main', mainScene);
-sceneManager.register('game-over', gameOverScene);
-sceneManager.register('campaign-victory', campaignVictoryScene);
+sceneManager.register(SCENE_IDS.MAIN, mainScene);
+sceneManager.register(SCENE_IDS.GAME_OVER, gameOverScene);
+sceneManager.register(SCENE_IDS.CAMPAIGN_VICTORY, campaignVictoryScene);
 sceneManager.register(
-  'campaign',
+  SCENE_IDS.CAMPAIGN,
   new CampaignScene({
     ui,
-    onReturnToMenu: () => sceneManager.setActive('title'),
+    onReturnToMenu: () => sceneManager.setActive(SCENE_IDS.TITLE),
     onStartLevel: ({ levelId, gymName, gymMainColor }) => {
       const selectedLevel = CAMPAIGN_LEVELS.find((level) => level.id === levelId && level.isAvailable);
       if (!selectedLevel) return;
@@ -74,12 +75,12 @@ sceneManager.register(
         }
       );
 
-      sceneManager.setActive('main');
+      sceneManager.setActive(SCENE_IDS.MAIN);
     }
   })
 );
 sceneManager.register(
-  'location',
+  SCENE_IDS.LOCATION,
   new LocationScene({
     ui,
     onStartGame: ({ locationId, difficultyId, gymName, gymMainColor }) => {
@@ -90,19 +91,19 @@ sceneManager.register(
         gymName,
         gymMainColor
       });
-      sceneManager.setActive('main');
+      sceneManager.setActive(SCENE_IDS.MAIN);
     }
   })
 );
 sceneManager.register(
-  'title',
+  SCENE_IDS.TITLE,
   new TitleScene({
     ui,
-    onStartCampaign: () => sceneManager.setActive('campaign'),
-    onStartFreeMode: () => sceneManager.setActive('location')
+    onStartCampaign: () => sceneManager.setActive(SCENE_IDS.CAMPAIGN),
+    onStartFreeMode: () => sceneManager.setActive(SCENE_IDS.LOCATION)
   })
 );
-sceneManager.setActive('title');
+sceneManager.setActive(SCENE_IDS.TITLE);
 
 const game = new Game({
   canvas,
